@@ -1,0 +1,478 @@
+/*
+    This file is part of M's INI file format library
+
+    M's INI file format library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    M's INI file format library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with M's INI file format library.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include "ini.h"
+
+
+using namespace std;
+
+ini_document::section::option::option()
+{
+}
+
+
+ini_document::section::option::option(string label, string value, string comment)
+{
+	this->label = label;
+	this->value = value;
+	this->comment = comment;
+}
+
+
+ini_document::section::option::~option()
+{ }
+
+
+ini_document::section::section()
+{ }
+
+
+ini_document::section::section(string name, string comment)
+{
+	this->name = name;
+	this->comment = comment;
+}
+
+
+ini_document::section::~section()
+{
+}
+
+
+std::string ini_document::section::operator[](const std::string &label)
+{
+	vector<class ini_document::section::option>::iterator i;
+	for(i = this->option_list.begin(); i != this->option_list.end(); i++)
+	{
+		if( (*i).label == label)
+		{
+			return (*i).value;
+		}
+	}
+
+	// if it doesn't exist then create one just for kicks
+	return string();
+}
+
+
+void ini_document::section::pushOption(string name, string value, string comment)
+{
+	this->option_list.push_back(option(name, value, comment));
+}
+
+
+void ini_document::section::pushComment(string comment)
+{
+	this->option_list.push_back(option(string(), string(), comment));
+}
+
+
+ini_document::section & ini_document::section::operator=(const ini_document::section &rhs)
+{
+	this->name = rhs.name;
+	this->comment = rhs.comment;
+	this->option_list = rhs.option_list;
+	return *this;
+}
+
+
+ini_document::ini_document()
+{
+	p = q = marker = limit = eos = &buffer[0];
+
+	set_error_output(cerr);
+}
+
+
+ini_document::~ini_document()
+{
+}
+
+
+
+class ini_document::section & ini_document::operator[] (const string name)
+{
+	vector<ini_document::section>::iterator i;
+	for(i = this->section_list.begin(); i != this->section_list.end(); i++)
+	{
+		if( (*i).name == name)
+		{
+			return *i;
+		}
+	}
+
+	// if it doesn't exist then create one just for kicks
+	this->section_list.push_back(section(name));
+	return this->section_list.back();
+}
+
+
+
+class ini_document::section & ini_document::createSection(string name, string comment)
+{
+	this->section_list.push_back(section(name, comment));
+	return this->section_list.back();
+}
+
+
+
+void ini_document::toOutputStream(ostream &o)
+{
+	vector<ini_document::section>::iterator is;
+	vector<ini_document::section::option>::iterator io;
+	for(is = this->section_list.begin(); is != this->section_list.end(); is++)
+	{
+		if( (*is).name.empty() )	/* is it a comment line? */
+		{
+			if( (*is).comment.empty() )
+				o << "\n";
+			else
+				o << ";" << (*is).comment << "\n";
+		}
+		else	/* output the section name */
+		{
+			o << "[" << (*is).name << "]";
+			if( (*is).comment.empty() )
+				o << endl;
+			else
+				o << "; " << (*is).comment << "\n";
+			/* output the options */
+			for( io = (*is).option_list.begin(); io != (*is).option_list.end(); io++ )
+			{
+				if( (*io).label.empty() )
+				{
+					//TODO perform error checking
+					if( (*io).comment.empty() )
+					{
+					}
+					else
+					{
+						o << ";" << (*io).comment << "\n";
+					}
+				}
+				else
+				{
+					o << (*io).label << " = " << (*io).value;
+					if( (*io).comment.empty() )
+					{
+						o << "\n";
+					}
+					else
+					{
+						o << "\t; " << (*io).comment << "\n";
+					}
+
+				}
+			}
+		}
+		o << endl;
+	}
+}
+
+
+ini_document ini_document::fromInputStream(std::istream &is)
+{
+	using namespace std;
+	string label, value;
+	section *current_section = NULL;
+
+	size_t line_count = 1;
+
+	int token_value = 0;
+	int state = 0;
+	while( token_value != EOS )
+	{
+		switch(state)
+		{
+			case 0:	// default state
+				switch( token_value = lexer(is) )
+				{
+					case '[':
+						state = 1;	// start section
+						break;
+
+					case SECTION:
+						label = token;
+						state = 3;	// wait for assign
+						break;
+
+					case TEXT:	// section-less label-value pair
+						label = token;
+						state = 4;	// wait for assign
+						break;
+
+					case COMMENT:
+						if(current_section == NULL)
+						{
+							current_section = &this->createSection("");
+						}
+						current_section->pushComment(token);
+						state = 30; 	// wait for EOL
+						break;
+
+					case WS:
+						break;
+
+					case EOL:
+					case EOS:
+						++line_count;
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 1:	// start section
+				switch( token_value = lexer(is) )
+				{
+					case TEXT:
+						label = token;
+						state = 2;	// close section
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 2:	// close section
+				switch( token_value = lexer(is))
+				{
+					case ']':
+						state = 3;	// followup on close section
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 3:	// followup on close section
+				switch( token_value = lexer(is) )
+				{
+					case COMMENT:
+						current_section = &this->createSection(label, token);
+						state = 30;	// wait for EOL
+						break;
+
+					case WS:
+						break;
+
+					case EOL:
+					case EOS:
+						++line_count;
+						current_section = &this->createSection(label);
+						state = 0;
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 4:	// wait for assign
+				switch( token_value = lexer(is) )
+				{
+					case '=':
+						state = 5;	// wait for value
+						break;
+
+					case WS:
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 5:	// wait for value
+				switch( token_value = lexer(is) )
+				{
+					case TEXT:
+					case ESCAPED_TEXT:
+						value = token;
+						state = 6;	// wait for EOL or comment
+						break;
+
+					case WS:
+						break;
+
+					case EOS:
+					case EOL:
+						++line_count;
+						if(current_section == NULL)
+							current_section = &this->createSection("");
+						current_section->pushOption(label,"");
+						state = 0;
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 6:	// wait for EOL or comment
+				switch( token_value = lexer(is) )
+				{
+					case EOS:
+					case EOL:
+						++line_count;
+						if(current_section == NULL)
+							current_section = &this->createSection("");
+						current_section->pushOption(label,value);
+						state = 0;
+						break;
+
+					case COMMENT:
+						if(current_section == NULL)
+							current_section = &this->createSection("");
+						current_section->pushOption(label,value, token);
+						state = 30; // wait for EOL
+						break;
+
+					case WS:
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait until EOL
+						break;
+				}
+				break;
+
+			case 30:	// wait for EOL
+				switch( token_value = lexer(is))
+				{
+					case WS:
+						break;
+
+					case EOS:
+					case EOL:
+						++line_count;
+						state = 0;
+						break;
+
+					default:
+						*out << "ini parser error at line " << line_count << endl;
+						state = 31;	// wait unconditionally until EOL
+						break;
+				}
+				break;
+			
+			case 31:	// wait unconditionally for EOL
+				switch( token_value = lexer(is) )
+				{
+					case EOS:
+					case EOL:
+						++line_count;
+						state = 0;
+						break;
+
+					default:
+						break;
+				}
+				break;
+			
+			default:
+				*out << "This is a bug: renegade state" << endl;
+		}
+	
+
+	}
+	return *this;
+}
+
+int ini_document::lexer(std::istream &is)
+{
+	using namespace std;
+#define YYFILL(n)	{ fill(is); }
+/*!re2c
+	re2c:define:YYCTYPE 	= "char";
+	re2c:define:YYCURSOR 	= p;
+	re2c:define:YYMARKER 	= marker;
+	re2c:define:YYLIMIT	= limit;
+	re2c:yyfill:enable	= 1;
+	
+	"[" [^\n\r\[\]]+ "]"	{token.clear(); token.assign(q+1,p-q-2); q=p; return SECTION;}
+	"="	{ return (int)*q++;}
+	[^ =\t\n\r\[][^ =\t\n\r]{0,79}	{ token.clear(); token.assign(q,p-q); q=p; return TEXT;}
+	"\""([^\n\r\"]|"\""){0,78}"\""	{ token.clear(); token.assign(q,p-q); q=p; return ESCAPED_TEXT;}
+	";"[^\r\n]{0,200}	{ token.clear(); token.assign(q+1,p-q-1); q=p; return COMMENT; }
+	[ \t]+	{q=p;return WS;}
+	"\n"	{ ++q; return (p==eos)? EOS : EOL;}
+	.	{ return ERROR; }
+	 */
+#undef YYFILL
+}
+
+
+void ini_document::fill(std::istream &is)
+{
+	using namespace std;
+	if(!is.eof() )
+	{
+		if(p == limit)	// empty buffer, the first run
+		{
+			is.read(buffer,BUFFER_SIZE);
+			limit = &buffer[is.gcount()+1];
+			p = q = buffer;
+		}
+		else
+		{
+			// move the unparsed buffer content to the top of the buffer
+			for(char *buffer_bottom = q, *buffer_top = &buffer[0]; buffer_bottom < limit; buffer_bottom++, buffer_top++)
+			{
+				*buffer_top = *buffer_bottom;
+			}
+			// fill the rest of the buffer
+			is.read(&buffer[limit-q],BUFFER_SIZE-(limit-q));
+
+			limit = &buffer[limit-q+is.gcount()];
+			// move the pointers to their relative positions
+			p = &buffer[p-q];
+			q = &buffer[0];
+
+		}
+		if(is.eof())
+		{
+			// stream delivered EOF
+			eos = limit-1;
+			*eos = '\n';
+			*(eos-1) = '\n';	// crude hack to avoid documents without a \n terminating the very last line
+		}
+	}
+}
+
+
+void ini_document::set_error_output(std::ostream &o)
+{
+	this->out = &o;
+}
+
