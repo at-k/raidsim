@@ -1,25 +1,25 @@
 #ifndef __FM_DEFINITION_H
 #define __FM_DEFINITION_H
 
-// -- FMチップの性能関係パラメータ
-#define FMDIE_READ_BUSY_TIME_US     50 // read:  die op time (page->register)
-#define FMDIE_WRITE_BUSY_TIME_US  1400 // write: die op time (page->register)
-#define FMDIE_REGREAD_BUSY_TIME_US   1 // reg read: die op time
-#define FMDIE_ERASE_BUSY_TIME_US  5000 // erase: die op time
-#define FMBUS_TX_BUSY_TIME_US       59 // read/write: register->controller(bus op time)
-#define FMBUS_COM_TX_BUSY_TIME_US    1 // read/eraseの最初の1回目,writeの最後のリターン
+// -- performance parameter for flash memory
+//#define FMDIE_READ_BUSY_TIME_US     50 // read:  die op time (page->register)
+//#define FMDIE_WRITE_BUSY_TIME_US  1400 // write: die op time (page->register)
+//#define FMDIE_REGREAD_BUSY_TIME_US   1 // reg read: die op time
+//#define FMDIE_ERASE_BUSY_TIME_US  5000 // erase: die op time
+//#define FMBUS_TX_BUSY_TIME_US       59 // read/write: register->controller(bus op time)
+//#define FMBUS_COM_TX_BUSY_TIME_US    1 // read/eraseの最初の1回目,writeの最後のリターン
 
-// -- バイト定義
-#define BYTES_PER_SECTOR           512                                // 1セクタあたりのバイト数
-#define BYTE2SECTOR(x) ( (unsigned long long int)(x) / BYTES_PER_SECTOR ) // バイト→セクタ
-#define GB2SECTOR(x)   ( (unsigned long long int)(x)*(1024*1024*1024/ BYTES_PER_SECTOR) ) // ギガバイト→セクタ
-#define SECTOR2BYTE(x) ( (x) * BYTES_PER_SECTOR )                     // セクタ→バイト
-#define SECTOR2GB(x)   ( (SECTOR_BYTES*( (x) / 1024)/1024) / 1024 )   // セクタ→ギガバイト
+// -- data chunk definition
+#define BYTES_PER_SECTOR           512
+#define BYTE2SECTOR(x) ( (unsigned long long int)(x) / BYTES_PER_SECTOR )
+#define GB2SECTOR(x)   ( (unsigned long long int)(x)*(1024*1024*1024/ BYTES_PER_SECTOR) )
+#define SECTOR2BYTE(x) ( (x) * BYTES_PER_SECTOR )
+#define SECTOR2GB(x)   ( (SECTOR_BYTES*( (x) / 1024)/1024) / 1024 )
 
-// -- 物理ページ構成
-#define SECTS_PER_PP               16                   // 1物理ページあたりのセクタ数
+// -- physical page definition
+#define SECTS_PER_PP               16                       // 1物理ページあたりのセクタ数
 #define BYTES_PER_PP     ( BYTES_PER_SECTOR*SECTS_PER_PP )  // 1物理ページあたりのバイト数
-#define PP_PER_PB     256                               // 1物理ブロックあたりのページ数
+#define PP_PER_PB        128                                // 1物理ブロックあたりのページ数
 #define SECTS_PER_PB      ( SECTS_PER_PP*PP_PER_PB )    // 1物理ブロックあたりのセクタ数
 #define BYTES_PER_PB      ( BYTES_PER_PP*PP_PER_PB )    // 1物理ブロックあたりのバイト数
 

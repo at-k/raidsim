@@ -58,10 +58,6 @@ Logger::~Logger()
 
 
 Logger* logger       = NULL;
-bool   g_is_trace_on = false;
-char trace_buffer_tmp[256];
-char trace_buffer[256];
-char trace_header[128];
 
 bool InitLogger(const char* outdir)
 {

@@ -129,27 +129,6 @@ public:
     inline uint32_t  GetPBNum()         const{ return pb_num;}
     inline uint32_t  GetPPNum()         const{ return pp_num;}
 
-    // バスの状態を設定
-    bool   SetBusStatus( uint16_t bus_id, BUS_STATUS status );
-
-    // バスの状態参照
-    inline bool  IsBusBusy( uint16_t bus_id )
-    {
-        if( bus_info[bus_id].status == BUS_BUSY )
-            return true;
-        return false;
-    }
-
-    // CEの状態を設定
-    bool   SetCEStatus( CEADDR* ce_addr, CE_STATUS status );
-
-    // 現在CEはビジーかどうか
-    inline bool   IsCEBusy( CEADDR* ce_addr )
-    {
-        if( ce_info[ce_addr->dma_id][ce_addr->ce_id].status == CE_BUSY )
-            return true;
-        return false;
-    }
 
     // - 物理ブロックのGlobal ID(通し番号)とFM位置との対応付け定義
     inline void GetPBGIDFromFMAddress( FMADDR* addr, uint32_t* pb_gid  )
@@ -174,7 +153,7 @@ public:
     inline void GetCEAddressFromDieAddress( FMADDR* die_addr, CEADDR* ce_addr )
     {
         ce_addr->dma_id = die_addr->bus / (bus_num / dma_num);  // バス数 / DMA数
-        ce_addr->ce_id  = (die_addr->chip * die_per_chip + die_addr->die) / die_per_ce_per_bus; // バス内でのID
+		ce_addr->ce_id  = (die_addr->chip * die_per_chip + die_addr->die) / die_per_ce_per_bus; // バス内でのID
     }
 
     // -- ダイのアドレスから，同じCEと交差する何番目のバスかを計算

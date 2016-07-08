@@ -53,7 +53,7 @@ public:
 
     //-- FTL‚Ì’†gƒ_ƒ“ƒv
     //   ‚±‚±‚Í‹ó
-    virtual void Dump( std::ofstream& write_file ) {}
+    virtual void Dump( std::ofstream& write_file );
 
 protected:
     LP_INFO* lp_info;

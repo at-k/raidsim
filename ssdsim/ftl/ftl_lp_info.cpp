@@ -209,3 +209,4 @@ void LP_INFO::InitPG( PG_INFO* pg_info )
     init_que( &pg_info->que ); // ƒLƒ…[‰Šú‰»
     pg_info->que.data = (void*)pg_info;
 }
+

@@ -63,7 +63,6 @@ uint32_t FtlInterfaceWL::GetOpenPG_Num()
 
 //-- LP table dump
 //
-//void FtlInterfaceWL::Dump( const char* key )
 void FtlInterfaceWL::Dump(std::ofstream& os )
 {
 	os << "WL_TYPE: " << wl_type << std::endl;

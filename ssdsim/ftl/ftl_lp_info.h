@@ -9,42 +9,39 @@
 #include "phy/fm_macro_def.h"
 #include "pbque.h"
 
-//-- FTLのデータ構造総まとめ- --
-//-- 略称定義
-// HLBA: Host Logical Block Number : ホストアドレスでユニーク
-// LPN : Logical Page Number       : ホストアドレスに1対1対応
-// PPN : Physical Page Number      : 物理ページ番号でパッケージ内ユニーク
-// PPO : Physical Page Offset      : 物理ブロック内の物理ページオフセット
-// VPA : Virtual Page Address      : 仮想ページ番号   (32bit: PG#, 24bit: PG Offset Sector, 8bit: Length)
+//-- FTL data structure- --
+//-- definition
+// HLBA: Host Logical Block Address : host address
+// LPN : Logical Page Number        : corresponding to host address
+// PPN : Physical Page Number       : unique physical page number
+// PPO : Physical Page Offset       : offset page number in physical block
+// VPA : Virtual Page Address       : virtual page number (32bit: PG#, 24bit: PG Offset Sector, 8bit: Length)
 
 
-//-- マクロ定義
-//#define VP_BITMAP_BYTES (PP_PER_PB / (8*sizeof(uchar)) )  // 物理ページの有効/無効判定ビットマップサイズ
-#define FTL_LP_NOT_ASSIGNED    0xFFFFFFFF                 // リソース未割り当てLP用のID
-#define FTL_PG_INVALID_ID      0xFFFFFFFF                 // 無効PG番号
-#define FTL_REWR_END           0xFFFFFFFF                 // ReWrite終了
+//-- macro definition
+#define FTL_LP_NOT_ASSIGNED    0xFFFFFFFF      // map value for not assigned logical page
+#define FTL_PG_INVALID_ID      0xFFFFFFFF      // invalid PG number
+#define FTL_REWR_END           0xFFFFFFFF      // end rewrite
 
-#define FTL_PG_BLOCK_NUM     32                           // ND1PのN+1数
-#define FTL_PG_PARITY_NUM     1                           // NDxPのP数
-#define FTL_SECTS_PER_LP     16                           // 1論理ページあたりのセクタ数
-//#define FTL_CW_PER_PG        ((FTL_PG_BLOCK_NUM-FTL_PG_PARITY_NUM) * PP_PER_PB * CW_PER_PP ) // PGあたりのCW数
-//#define FTL_PG_END_CW        FTL_CW_PER_PG                // 最終CW
+#define FTL_PG_BLOCK_NUM      32               // Block RAID(N in NDxP)
+#define FTL_PG_PARITY_NUM     1                // Block RAID(x in NDxP)
+#define FTL_SECTS_PER_LP      16               // LP sector size
 
-#define FTL_OPENPG_NUM           1                           // 同時OpenPG数
-#define FTL_OPENPG_WL_NUM        7                           // 同時OpenPG数,WL試作用
+#define FTL_OPENPG_NUM        1	               // open pg number
+#define FTL_OPENPG_WL_NUM     7                // open pg for special
 
-#define FTL_MAX_REWR_REQ      16                          // 最大同時要求ReWrite数
-#define FTL_MAX_ERASE_REQ     4                           // 最大同時消去ブロック
-#define FTL_MAX_ERASE_REG     256                         // 最大同時消去予約数
+#define FTL_MAX_REWR_REQ      16               // maximum GC request
+#define FTL_MAX_ERASE_REQ     4                // maximum erase requesst
+#define FTL_MAX_ERASE_REG     256              // maximum erase reservation
 
 
-//-- 先行宣言
+//-- declaration
 class  FM_INFO;
 class  FtlInterface;
 class  FtlAsynReqInterface;
 
-//-- 型宣言
-//状態
+//-- type declaration
+//status
 enum FTL_PG_STATUS
 {
     FTL_PGS_FREE,
@@ -54,12 +51,12 @@ enum FTL_PG_STATUS
 };
 enum FTL_PB_STATUS
 {
-    FTL_PBS_FREE,   // 空き
-    FTL_PBS_BIND,   // PG構成中
-    FTL_PBS_INVALID // 無効
+    FTL_PBS_FREE,
+    FTL_PBS_BIND,   // added to PG
+    FTL_PBS_INVALID
 };
 
-//アドレス空間
+//address space definition
 typedef uint32_t FTL_LP_GADDR;
 typedef uint32_t FTL_PG_GADDR;
 typedef uint32_t FTL_PB_GADDR;
@@ -67,55 +64,54 @@ typedef uint32_t FTL_PP_GADDR;
 typedef uint32_t FTL_PG_OADDR; // pg offset address
 typedef uint16_t FTL_PB_OADDR; // pb offset address
 
-//-- IO要求種別
+//-- IO request
 enum FTL_FMIO_TYPE
 {
-    FMT_HOST_WR, // ホスト要求
-    FMT_HOST_RD, // ホスト要求
-    FMT_RCM_RWR, // RCM
+    FMT_HOST_WR, // host request write
+    FMT_HOST_RD, // host request read
+    FMT_RCM_RWR, // block reclamation
     FMT_REF_RWR, // RF
-    FMT_BLK_ERS, // 消去リクエスト
-    FMT_DEFAULT  // 無効値
+    FMT_BLK_ERS, // erase
+    FMT_DEFAULT  // invalid
 };
 
-//-- 構造体定義
-// 拡張オプション
+//-- struct definition
+// ftl option
 typedef struct {
-    bool      enable_pg_composition;// pg構成設定のためのフラグ
+    bool      enable_pg_composition;
     uint32_t  pg_pb_num;
     uint32_t  pg_parity_num;
-
-    bool      enable_rcm_th;// rcm閾値設定のためのフラグ
+    bool      enable_rcm_th;
     uint32_t  rcm_th;
 } FTL_EXT_OPT;
 
-// オープン情報
+// open pg information
 typedef struct {
-   FTL_FMIO_TYPE type; // オープンタイプ
-   uchar           id; // 登録ID（配列位置）
+   FTL_FMIO_TYPE type; // open type
+   uchar           id; // registered ID(to specify array position)
 } FTL_OPENPG_INFO;
 
-// ブロック消去予約
+// block erase reservation information
 typedef struct {
-    FTL_PB_GADDR pb_id;  // ブロックアドレス
-    uint32_t     reg_id; // 登録チケットID
+    FTL_PB_GADDR pb_id;  // block address
+    uint32_t     reg_id; // reservation ID
 } FTL_ERASE_REQ;
 
-// VPA構造体形式
+// virtual page address
 typedef struct {
     FTL_PG_GADDR pgn;
     FTL_PG_OADDR ofs;
     uchar        len;
-    uchar        rcm_count; // 連続RCM実施回数
+    uchar        rcm_count; // option for wearleveling
 } VPA_INFO;
 
-// 逆引き情報
+// reverse map
 typedef struct {
     FTL_LP_GADDR lpn;
     uchar        len;
 } REVERSE_INFO;
 
-// CW位置情報
+// code word position information
 typedef struct {
     FTL_PB_GADDR pbn;
     FTL_PB_OADDR ppo;
@@ -123,42 +119,41 @@ typedef struct {
     uchar    len;
 } CW_INFO;
 
-// 物理ブロック情報
+// physical block information
 typedef struct __PB_INFO {
-    FTL_PB_GADDR  id;          // ユニークな物理ブロックID
-    FTL_PB_STATUS status;      // ブロック状態
+    FTL_PB_GADDR  id;          // unique block id
+    FTL_PB_STATUS status;
 
-    FTL_PG_GADDR  pg_no;       // PG番号
+    FTL_PG_GADDR  pg_no;       // belonging PG no
 
-    uint32_t  erase_count;     // 累計消去回数(劣化度)
-    uint64_t  last_erase_time; // 最終消去時間
+    uint32_t  erase_count;     // cumulative erase count
+    uint64_t  last_erase_time;
 
-    //-- 制御用情報
-    uint16_t  ce_no;  // 所属CE番号 ( 0～busあたりCE数 - 1 )
-    uint16_t  bus_no; // 所属BUS番号( 通番 )
+    //-- physical position information
+    uint16_t  ce_no;  // CE no
+    uint16_t  bus_no; // bus no
 
 } PB_INFO;
 
-// パリティグループ情報
+// PG(parity group) information
 typedef struct __PG_INFO {
-    FTL_PG_GADDR  id;        // ユニークID
-    FTL_PG_STATUS status;    // ステータス
+    FTL_PG_GADDR  id;        // unique ID
+    FTL_PG_STATUS status;
 
-    uchar         attr;      // オープン属性(hot/cold的な)，暫定的に1Bインデックスとする
+    uchar         attr;      // open attribution
 
-    FTL_PG_OADDR  vs_num;    // PG内の有効セクタ数
-    FTL_LP_GADDR  lp_num;    // PG内の有効論理ページ参照数
+    FTL_PG_OADDR  vs_num;    // valid secotr num
+    FTL_LP_GADDR  lp_num;    // valid LP num
 
-    FTL_OPENPG_INFO  opg_info;  // オープンPG情報
-    FTL_PG_OADDR     next_ofs;  // 次書込先アドレス
-    PB_INFO**        pb_list; // 構成ブロック情報
+    FTL_OPENPG_INFO  opg_info;  // reference for open pg information
+    FTL_PG_OADDR     next_ofs;  // next write position
+    PB_INFO**        pb_list;   // block information
 
-    std::deque<REVERSE_INFO> p2l_tbl; // 逆引き
-    FTL_PG_OADDR  next_rewr_index;    // 次ReWriteインデックス
-    FTL_PG_OADDR  next_rewr_pgsect;   // 次ReWritePG内オフセットセクタ#
+    std::deque<REVERSE_INFO> p2l_tbl; // reverse map
+    FTL_PG_OADDR  next_rewr_index;    // for gc: next copy target
+    FTL_PG_OADDR  next_rewr_pgsect;   // for gc: next copy target sector
 
-    QUEUE  que; // close que用
-
+    QUEUE  que; // close que
 } PG_INFO;
 
 //-- 空きブロック選択用，前回までのブロック選択情報
@@ -231,7 +226,7 @@ public:
 
     void InitPG( PG_INFO* pg);
 
-    // pool & pg & pb
+	// pool & pg & pb
     FTL_PG_GADDR   pg_num;
     FTL_PB_GADDR   pb_num;
 

@@ -107,7 +107,7 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
     pg_dst_info->vs_num += len; // 有効セクタ数
     pg_dst_info->lp_num ++;     // 参照論理ページ数
 
-    if( pg_dst_info->next_ofs == lp_info->pg_cw_num )
+    if( pg_dst_info->next_ofs == lp_info->pg_cw_num*SECTS_PER_CW )
     {// 最後まで書き込み完了
         if( OpenToClose( pg_dst_info ) == false )
         {
@@ -473,99 +473,22 @@ bool FtlInterface::UpdateCloseRanking( PG_INFO* pg_info )
 
     insert_forward( &lp_info->apg.close_pg_que, pos, &pg_info->que );
 
-#if 0
-    uint16_t invalid_page_ratio;
-    uint16_t rank;
-
-    if ( (pb_info->que->head == &pool_info->rcm_block_que) ||
-         (pb_info->que->head == &pool_info->rcm_comp_wait_que) )
-    {// RCM対象ブロックはクローズに入っていない。
-        return true;
-    }
-
-    // 一回取り出す
-    remove_item( pb_info->que->head, pb_info->que );
-
-    // 無効率の計算，100倍して割る。
-    invalid_page_ratio = (100 * ( PP_PER_PB - pb_info->vp_count )) / PP_PER_PB;
-
-    // プール基準RCMにおいて無効率が極端に高いブロックはない
-    // なので，無効率低い方で細かく分ける
-    if( invalid_page_ratio > 50 )
-        rank = 0;
-    else if ( invalid_page_ratio > 40 )
-        rank = 1;
-    else if ( invalid_page_ratio > 30 )
-        rank = 2;
-    else if ( invalid_page_ratio > 20 )
-        rank = 3;
-    else if ( invalid_page_ratio > 15 )
-        rank = 4;
-    else if ( invalid_page_ratio > 10 )
-        rank = 5;
-    else if ( invalid_page_ratio > 5 )
-        rank = 6;
-    else
-        rank = 7;
-
-    // 対象ランクのキューにエンキューする
-    insert_end( &pool_info->close_block_que[rank], pb_info->que );
-#endif
-
     return true;
 }
 
-#if 0
-void SetPBasRcmTarget ( LP_INFO* l2p_info, uint32_t pb_no )
+void FtlInterface::Dump(std::ofstream& os )
 {
+	os <<  "LP, map" << std::endl;
 
-    PB_INFO*   pb_info;
-    POOL_INFO* pool_info;
+    for( uint32_t i = 0; i < lp_info->lp_num;  i++ )
+    {
+		os << i << "," <<
+			lp_info->l2p_tbl[i].pgn << "," <<
+			lp_info->l2p_tbl[i].ofs << "," <<
+			+lp_info->l2p_tbl[i].len << "," <<
+			+lp_info->l2p_tbl[i].rcm_count << std::endl;
+	}
 
-    // 対象の情報取得
-    pb_info = &l2p_info->pb_list[pb_no];
-    pool_info = pb_info->pool;
-
-    if ( pb_info->que->head == &pool_info->rcm_block_que )
-    {// 既にブロック登録済み
-        return;
-    }
-
-    // RCM対象はクローズキューから取り出し
-    remove_item( pb_info->que->head, pb_info->que );
-
-    // 登録
-    insert_end( &pool_info->rcm_block_que, pb_info->que );
-
-    // 平均追加時有効ページ数を更新
-    pool_info->initial_vp_count =
-        (pool_info->initial_vp_count * pool_info->rcm_block_que.count + pb_info->vp_count)
-            / (pool_info->rcm_block_que.count + 1 );
-
-
-    // RCM検索位置を初期化
-    pb_info->rcm_search_pos = 0;
-
-    return;
+	os << std::endl;
 }
 
-bool SetPBasRcmCompWait( LP_INFO* l2p_info, uint32_t pb_no )
-{
-    PB_INFO*   pb_info;
-    POOL_INFO* pool_info;
-    QUEUE*     que_entry;
-
-    // 対象の情報取得
-    pb_info = &l2p_info->pb_list[pb_no];
-    pool_info = pb_info->pool;
-
-    que_entry = pb_info->que;
-
-    remove_item( &pool_info->rcm_block_que, que_entry ); // ブロックをRCMキューから取り出し
-
-    // 待ちキューへ追加
-    insert_front( &pool_info->rcm_comp_wait_que, que_entry );
-
-    return true;
-}
-#endif

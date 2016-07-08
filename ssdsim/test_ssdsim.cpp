@@ -88,8 +88,10 @@ int main(int argc, char* argv[])
 
 	fm_info = new FM_INFO();
     ftl_data = new LP_INFO();
-    ftl_if = new FtlInterfaceWL();
-    ftl_asyn_if = new FtlAsynReqInterfaceWL();
+    ftl_if = new FtlInterface();
+    ftl_asyn_if = new FtlAsynReqInterface();
+//    ftl_if = new FtlInterfaceWL();
+//    ftl_asyn_if = new FtlAsynReqInterfaceWL();
 
 	uint64_t bytes_per_chip = 2;
 	bytes_per_chip *= (1024*1024*1024);

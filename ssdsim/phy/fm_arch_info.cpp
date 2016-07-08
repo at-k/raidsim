@@ -192,26 +192,3 @@ bool FM_INFO::InitFlashModule(
     return true;
 }
 
-bool FM_INFO::SetBusStatus( uint16_t bus_id, BUS_STATUS status )
-{
-    if( bus_info[bus_id].status == status )
-    {// 同じ状態への変更は出来ない (Idle->Idle, Busy->Busyは禁止）
-        return false;
-    }
-
-    bus_info[bus_id].status = status;
-
-    return true;
-}
-
-bool FM_INFO::SetCEStatus( CEADDR* ce_addr, CE_STATUS status )
-{
-    if( ce_info[ce_addr->dma_id][ce_addr->ce_id].status == status )
-    {// 同じ状態への変更は出来ない (Idle->Idle, Busy->Busyは禁止）
-        return false;
-    }
-
-    ce_info[ce_addr->dma_id][ce_addr->ce_id].status = status;
-
-    return true;
-}

@@ -627,11 +627,11 @@ void SimCore::RunStep()
     {
         if( g_ttl_statis.host_io_count > sim_info.trace_off_io_count )
         {
-            g_is_trace_on = false;
+            //g_is_trace_on = false;
         }
         else if( g_ttl_statis.host_io_count >= sim_info.trace_on_io_count )
         {
-            g_is_trace_on = true;
+            //g_is_trace_on = true;
         }
     }
 
