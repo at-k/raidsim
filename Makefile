@@ -1,7 +1,7 @@
 CC	= g++
 CFLAGS	= -Wall -g -c -std=c++11
 LDFLAGS	=
-INCLUDES = -I.
+INCLUDES = -I. -I./util
 LIBS	=
 HEADERS =
 TARGET	= run_sim
@@ -9,6 +9,7 @@ OBJDIR	= ./obj
 
 SOURCES	=	$(wildcard *.cpp) \
 			$(wildcard inilib/*.cpp) \
+			$(wildcard util/*.cpp) \
 			$(wildcard spc1_gen/*.cpp)
 
 OBJS	=	$(addprefix $(OBJDIR)/, $(SOURCES:.cpp=.o))

@@ -1,7 +1,7 @@
 CC	= g++
 CFLAGS	= -Wall -g -c -std=c++11
 LDFLAGS	=
-INCLUDES = -I.
+INCLUDES = -I. -I../util
 LIBS	=
 HEADERS =
 TARGET	= run_ssdsim
@@ -9,7 +9,8 @@ OBJDIR	= ./obj
 
 SOURCES	=	$(wildcard *.cpp) \
 			$(wildcard ftl/*.cpp) \
-			$(wildcard phy/*.cpp)
+			$(wildcard phy/*.cpp) \
+			$(wildcard util/*.cpp)
 
 OBJS	=	$(addprefix $(OBJDIR)/, $(SOURCES:.cpp=.o))
 

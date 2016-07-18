@@ -1,2 +1,2 @@
 #!/bin/env sh
-ctags --extra=+fq --fields=+afikKlmnsSzt -h cpp.h *.cpp *.h
+ctags --extra=+fq --fields=+afikKlmnsSzt -R -h cpp.h *.cpp *.h

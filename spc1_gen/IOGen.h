@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 #include "Command.h"
-#include "../util_random.h"
+#include "util_random.h"
 
 class IOGen
 {

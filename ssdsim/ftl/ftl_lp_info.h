@@ -111,14 +111,6 @@ typedef struct {
     uchar        len;
 } REVERSE_INFO;
 
-// code word position information
-typedef struct {
-    FTL_PB_GADDR pbn;
-    FTL_PB_OADDR ppo;
-    uchar    cwo;
-    uchar    len;
-} CW_INFO;
-
 // physical block information
 typedef struct __PB_INFO {
     FTL_PB_GADDR  id;          // unique block id
