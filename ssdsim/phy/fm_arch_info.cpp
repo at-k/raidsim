@@ -1,6 +1,6 @@
 #include "fm_arch_info.h"
 #include "fm_macro_def.h"
-#include <nf_common.h>
+#include "common_def.h"
 
 FM_INFO::FM_INFO()
 {

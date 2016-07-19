@@ -14,7 +14,7 @@ bool FtlAsynReqInterface::Init( LP_INFO* _lp_info, FM_INFO* _fm_info, FtlInterfa
 
     // RCM開始閾値の設定
     rcm_start_th    = (FTL_PB_GADDR)(((lp_info->pb_num*lp_info->op_ratio)/100) * lp_info->rcm_th / 100 );
-    if( rcm_start_th <= _ftl_if->GetOpenPG_Num() * FTL_PG_BLOCK_NUM )
+    if( rcm_start_th <= _ftl_if->GetOpenPG_Num() * lp_info->pg_pb_num )
     {// 最低でも2回分は確保
         rcm_start_th = _ftl_if->GetOpenPG_Num() * lp_info->pg_pb_num * 2;
     }

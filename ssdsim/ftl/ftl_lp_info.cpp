@@ -69,7 +69,7 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
                 pp_num = pb_num * PP_PER_PB;
         }
 
-        lp_num   = (uint32_t)(usr_area_sector_num / SECTS_PER_PP); // 論理ページ数取得
+        lp_num   = (uint32_t)(usr_area_sector_num / FTL_SECTS_PER_LP); // 論理ページ数取得
         op_ratio = (double)((1 - (long double)lp_num / pp_num)*100);  // OP率計算
         FTL_PP_GADDR effective_pp_num = pp_num * (pg_pb_num - pg_parity_num ) / pg_pb_num;
         double real_op_ratio_tmp = (double)((1 - (long double)lp_num / effective_pp_num)*100);
@@ -81,6 +81,13 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
         {
             real_op_ratio = real_op_ratio_tmp;
         }
+		// for compression
+		if( option != NULL && option->enable_lp_virtualization ) {
+			printf("%d -> ", lp_num);
+			lp_num *= option->lp_multiple_rate;
+		}
+
+		printf("%d \n", lp_num);
 
     }
 

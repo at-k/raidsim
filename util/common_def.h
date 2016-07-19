@@ -1,6 +1,7 @@
 #ifndef COMMON_DEF__H
 #define COMMON_DEF__H
 
+#include "logger.h"
 
 // generic type definition
 #ifndef WIN32

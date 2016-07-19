@@ -5,7 +5,7 @@
 #include <deque>
 #include <vector>
 
-#include "nf_common.h"
+#include "common_def.h"
 #include "phy/fm_macro_def.h"
 #include "pbque.h"
 
@@ -24,7 +24,7 @@
 #define FTL_REWR_END           0xFFFFFFFF      // end rewrite
 
 #define FTL_PG_BLOCK_NUM      32               // Block RAID(N in NDxP)
-#define FTL_PG_PARITY_NUM     1                // Block RAID(x in NDxP)
+#define FTL_PG_PARITY_NUM     0                // Block RAID(x in NDxP)
 #define FTL_SECTS_PER_LP      16               // LP sector size
 
 #define FTL_OPENPG_NUM        1	               // open pg number
@@ -78,11 +78,13 @@ enum FTL_FMIO_TYPE
 //-- struct definition
 // ftl option
 typedef struct {
-    bool      enable_pg_composition;
-    uint32_t  pg_pb_num;
-    uint32_t  pg_parity_num;
-    bool      enable_rcm_th;
-    uint32_t  rcm_th;
+    bool		enable_pg_composition;
+    uint32_t	pg_pb_num;
+    uint32_t	pg_parity_num;
+    bool		enable_rcm_th;
+    uint32_t	rcm_th;
+	bool		enable_lp_virtualization;
+	double		lp_multiple_rate;
 } FTL_EXT_OPT;
 
 // open pg information

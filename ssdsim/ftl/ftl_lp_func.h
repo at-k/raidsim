@@ -59,7 +59,6 @@ inline void HostIoToFMIo(
 
     if( !IsPPAligned( hlba + length ) )
     {
-        (*end_lp) ++;         // はみ出た分だけ余分に追加
         *end_rmw_flag = true; // 読み出し必要
     }
     else

@@ -1,7 +1,7 @@
 #ifndef FMINFO___H
 #define FMINFO___H
 
-#include <nf_common.h>
+#include "common_def.h"
 #include "fm_macro_def.h"
 
 // -- FM‚ÌˆÊ’uî•ñ‚ğQÆ‚·‚é‚½‚ß‚Ì\‘¢‘Ì

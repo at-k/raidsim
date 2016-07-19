@@ -251,15 +251,6 @@ bool FtlAsynReqInterfaceWL::Init( LP_INFO* _lp_info, FM_INFO* _fm_info, FtlInter
     if( ! FtlAsynReqInterface::Init( _lp_info, _fm_info, _ftl_if ) )
         return false;
 
-    /*
-    // RCM開始閾値だけ書き換え
-    rcm_start_th    = (FTL_PB_GADDR)(((lp_info->pb_num*lp_info->op_ratio)/100) * lp_info->rcm_th / 100 );
-    if( rcm_start_th <= FTL_OPENPG_WL_NUM * FTL_PG_BLOCK_NUM )
-    {// 最低でも2回分は確保
-        rcm_start_th = FTL_OPENPG_WL_NUM*lp_info->pg_pb_num*2;
-    }
-    */
-
     return true;
 }
 

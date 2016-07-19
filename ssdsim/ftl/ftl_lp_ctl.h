@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-#include <nf_common.h>
+#include "common_def.h"
 #include "ftl_lp_info.h"
 #include "ftl_asyn_ctl.h"
 
@@ -49,7 +49,7 @@ class FtlInterface
 
 		//-- FM領域初期化
 		//   シーケンシャルに全領域1回ライト
-		bool Format();
+		bool Format(bool enable_comp = false, double comp_ratio = 1.0);
 
 		//-- FTLの中身ダンプ
 		virtual void Dump( std::ofstream& write_file );

@@ -12,6 +12,8 @@
 class FtlAsynReqInterface
 {
 public:
+	virtual ~FtlAsynReqInterface(){}
+
     virtual bool Init( LP_INFO* _lp_info, FM_INFO* _fm_info, FtlInterface* _ftl_if );
 
     //-- RCM‚É‚æ‚éIO—v‹‚ğŠ ‚èæ‚é
