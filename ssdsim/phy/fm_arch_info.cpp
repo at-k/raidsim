@@ -72,8 +72,8 @@ bool FM_INFO::InitFlashModule(
     fm_byte = byte_per_chip_i * chip_per_bus * bus_num;
     if( sizeof(size_t) == 4 && (fm_byte / 1024 / 1024 / 1024 ) > MAX_FM_GBSIZE )
     {
-        PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- FM Size is too large. Maximum support size is 2048GB -- input size is %d Byte\n", fm_byte);
-        ERR_AND_RTN;
+		ERR_AND_RTN;
+        //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- FM Size is too large. Maximum support size is 2048GB -- input size is %d Byte\n", fm_byte);
     }
 
     // トータル容量が適正か確認
@@ -82,7 +82,7 @@ bool FM_INFO::InitFlashModule(
     {// fm_byteが2^x byteでなかったらfalse
         if( (tmp & 0x1) != 0 )
         {
-            PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- 不正な容量です 2の累乗になる用に設定してください-- input size is %d Byte\n", fm_byte);
+            //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- 不正な容量です 2の累乗になる用に設定してください-- input size is %d Byte\n", fm_byte);
             ERR_AND_RTN;
         }
         tmp = tmp >> 1;
@@ -105,16 +105,19 @@ bool FM_INFO::InitFlashModule(
     pb_per_chip = pb_num / (bus_num * chip_per_bus);
     pb_per_die  = pb_num / (bus_num * chip_per_bus * die_per_chip);
 
+	if( pb_per_bus == 0 || pb_per_chip == 0 || pb_per_die == 0 )
+		ERR_AND_RTN;
+
     //-- chip enable 構成記述
     if( bus_num < dma_num )
     {
-        PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バス数がDMA数より少なく設定されています\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バス数がDMA数より少なく設定されています\n" );
         ERR_AND_RTN;
     }
 
     if( bus_num % dma_num != 0 )
     {
-        PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バス数はDMA数で割り切れる必要があります\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バス数はDMA数で割り切れる必要があります\n" );
         ERR_AND_RTN;
     }
 
@@ -122,13 +125,13 @@ bool FM_INFO::InitFlashModule(
 
     if( ce_per_bus > chip_per_bus * die_per_chip )
     {
-        PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バスあたりのCE数がバスあたりのダイ数を越えています\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バスあたりのCE数がバスあたりのダイ数を越えています\n" );
         ERR_AND_RTN;
     }
 
     if( ( die_per_chip * chip_per_bus ) % ce_per_bus )
     {
-        PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バスあたりのダイ数をCE数で割り切れません\n");
+        //PrintMessage( LOG_TYPE_ERROR, "Erorr at FM_INFO::InitFlashModule -- バスあたりのダイ数をCE数で割り切れません\n");
         ERR_AND_RTN;
     }
 

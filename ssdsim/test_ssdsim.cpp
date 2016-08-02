@@ -84,8 +84,8 @@ int main(int argc, char* argv[])
 
 	uint64_t byte_per_die = 1024*1024*1024;
 
-	SSD* ssd = new SSD();
-	//SSD* ssd = new CompSSD();
+	//SSD* ssd = new SSD();
+	SSD* ssd = new CompSSD();
 	if( !ssd->init(2,2,2, byte_per_die, 1.25) ) {
 		ERR_AND_RTN;
 	}

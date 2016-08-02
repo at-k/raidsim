@@ -170,12 +170,12 @@ _ERASE_SEARCH_END:
 // 次のReWrite対象論理ページ#を取得
 inline REVERSE_INFO FtlAsynReqInterface::GetNextReWriteLPN( PG_INFO* pg_info )
 {
-    FTL_LP_GADDR lpn;
+    //FTL_LP_GADDR lpn;
     REVERSE_INFO rev,rev_rtn;
     uint32_t     ofs;
     VPA_INFO     vpa;
 
-    lpn = FTL_REWR_END;
+    //lpn = FTL_REWR_END;
     rev_rtn.lpn = FTL_REWR_END;
 
     while( pg_info->p2l_tbl.size() > pg_info->next_rewr_index )

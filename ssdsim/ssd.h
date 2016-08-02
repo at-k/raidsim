@@ -14,6 +14,8 @@ class SSD {
 		SSD();
 		virtual ~SSD();
 
+		bool simple_init(uint64_t ttl_phy_bytes, double op_ratio);
+
 		virtual bool init(uint32_t channel_num, uint32_t pkg_per_ch,
 				uint32_t die_per_pkg, uint64_t byte_per_die, double op_ratio);
 
@@ -45,7 +47,7 @@ class CompSSD : public SSD{
 
 		virtual bool init(uint32_t channel_num, uint32_t pkg_per_ch,
 				uint32_t die_per_pkg, uint64_t byte_per_die, double op_ratio);
-		bool setup_cmp_engine(double avg_cmp_ratio, double avg_dev);
+		bool setup_cmp_engine(double avg_cmp_ratio, double avg_dev = 1 );
 
 	protected:
 		virtual bool lp_read(uint64_t lp_no);

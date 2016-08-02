@@ -33,8 +33,7 @@ bool Controller::build_raid(RAID_TYPE type, std::vector<DriveInfo*>& drive_list,
 	rg.stripe_size = stripe_size;
 
 	uint64_t drv_lba = drive_list.front()->max_lba;
-
-	if( stripe_size > drv_lba || drv_lba % stripe_size != 0 )
+	if( stripe_size > drv_lba )
 		ERR_AND_RTN;
 
 	DriveInfo* drv;
@@ -45,6 +44,12 @@ bool Controller::build_raid(RAID_TYPE type, std::vector<DriveInfo*>& drive_list,
 			ERR_AND_RTN;
 
 		rg.drive_list.push_back(drv);
+	}
+
+
+	if( drv_lba % stripe_size != 0 ) {
+		printf("# round up to stripe %d,%ld\n", stripe_size, drv_lba);
+		drv_lba -= drv_lba % stripe_size;
 	}
 
 	if( type == RAID5 ) {

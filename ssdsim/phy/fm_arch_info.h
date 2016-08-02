@@ -143,6 +143,7 @@ public:
     // -- ã‚Ì‹tˆø‚«
     inline void GetPBFMAddressFromGID( uint32_t pb_gid, FMADDR* out )
     {
+		//printf("%d, %d, %d\n", pb_per_bus, pb_per_chip, pb_per_die);
         out->bus  =  pb_gid / pb_per_bus;
         out->chip = (pb_gid % pb_per_bus)  / pb_per_chip;
         out->die  = (pb_gid % pb_per_chip) / pb_per_die;

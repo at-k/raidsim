@@ -33,49 +33,49 @@ bool CheckAdditionalOpt(int i, int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    const char*     conf_file = "testconf.ini";
-    const char*     out_dir   = "result";
-
-    bool no_ask = true;
-
-    { // analyze input argument
-        int i;
-        if( argc == 1 )
-        {
-            printf("#_no_opt:_load_default_parameter\n");
-        }
-        else
-        {
-            for( i = 1; i < argc; i++ )
-            {
-                if( strcmp(argv[i], "--conf_file") == 0 || strcmp(argv[i], "-f") ==0 )
-                {
-                    if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
-                    else conf_file = argv[i];
-                }
-                else if( strcmp(argv[i], "--out_dir") == 0 || strcmp(argv[i], "-o") ==0 )
-                {
-                    if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
-                    else out_dir = argv[i];
-                }
-                else if( strcmp(argv[i], "--no_ask") == 0 || strcmp(argv[i], "-n") ==0 )
-                {
-                    no_ask = true;
-                }
-                else if( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
-                {
-                    HowtoUse(argv[0]);
-                    return 0;
-                }
-                else
-                {
-                    printf("Invalid option -- %s\n", argv[i]);
-                    HowtoUse(argv[0]);
-                    return 0;
-                }
-            }
-        }
-    }
+//    const char*     conf_file = "testconf.ini";
+//    const char*     out_dir   = "result";
+//
+//    bool no_ask = true;
+//
+//    { // analyze input argument
+//        int i;
+//        if( argc == 1 )
+//        {
+//            printf("#_no_opt:_load_default_parameter\n");
+//        }
+//        else
+//        {
+//            for( i = 1; i < argc; i++ )
+//            {
+//                if( strcmp(argv[i], "--conf_file") == 0 || strcmp(argv[i], "-f") ==0 )
+//                {
+//                    if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
+//                    else conf_file = argv[i];
+//                }
+//                else if( strcmp(argv[i], "--out_dir") == 0 || strcmp(argv[i], "-o") ==0 )
+//                {
+//                    if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+//                    else out_dir = argv[i];
+//                }
+//                else if( strcmp(argv[i], "--no_ask") == 0 || strcmp(argv[i], "-n") ==0 )
+//                {
+//                    no_ask = true;
+//                }
+//                else if( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
+//                {
+//                    HowtoUse(argv[0]);
+//                    return 0;
+//                }
+//                else
+//                {
+//                    printf("Invalid option -- %s\n", argv[i]);
+//                    HowtoUse(argv[0]);
+//                    return 0;
+//                }
+//            }
+//        }
+//    }
 
 	std::list<Controller*> ctl_list;
 	std::list<Controller*>::iterator itr;
@@ -120,6 +120,8 @@ int main(int argc, char* argv[])
 	const uint64_t check_point = ttl_io / 10;
 	uint64_t check_count;
 
+	sim_srand(0);
+
 	for( uint64_t i = 0; i < ttl_io; i++ )
 	{
 		if( check_count > check_point ) {
@@ -134,10 +136,13 @@ int main(int argc, char* argv[])
 
 		for( itr = ctl_list.begin(); itr != ctl_list.end(); itr++ ) {
 			cmd.lba = sim_rand64((*itr)->get_max_lba() - cmd.sector_num );
+
 			if( !(*itr)->receive_command( cmd) )
 				return false;
 
-			while( (*itr)->pull_next_command( drv_cmd) ){}
+			while( (*itr)->pull_next_command( drv_cmd) ){
+
+			}
 		}
 	}
 	printf("\n");
@@ -147,38 +152,38 @@ int main(int argc, char* argv[])
 
 	return 0;
 
-    SimCore sim;
-    if( !sim.Initialize(conf_file, out_dir) )
-        goto _SIM_END_;
-
-    while(0)
-    {
-        if( !sim.IsSimEnd() )
-            sim.RunStep();
-        else
-        {// ending simulation
-            if( !no_ask )
-            {// continue?
-                printf("continue?[y/n]\n");
-                fflush( stdout );
-
-                int y_n;
-                do {
-                    y_n = getchar();
-				} while( y_n == 0x0a );
-
-                if( y_n == 'y' ) // reset io/timer counter and continue simulator
-                    sim.ResetEndCounter();
-                else if( y_n == 'n' ) // end simulator
-                    break;
-            }
-            else
-                break;
-        }
-    }
-
-_SIM_END_:
-    sim.Close();
+//    SimCore sim;
+//    if( !sim.Initialize(conf_file, out_dir) )
+//        goto _SIM_END_;
+//
+//    while(0)
+//    {
+//        if( !sim.IsSimEnd() )
+//            sim.RunStep();
+//        else
+//        {// ending simulation
+//            if( !no_ask )
+//            {// continue?
+//                printf("continue?[y/n]\n");
+//                fflush( stdout );
+//
+//                int y_n;
+//                do {
+//                    y_n = getchar();
+//				} while( y_n == 0x0a );
+//
+//                if( y_n == 'y' ) // reset io/timer counter and continue simulator
+//                    sim.ResetEndCounter();
+//                else if( y_n == 'n' ) // end simulator
+//                    break;
+//            }
+//            else
+//                break;
+//        }
+//    }
+//
+//_SIM_END_:
+//    sim.Close();
 
     return 0;
 }

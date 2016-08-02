@@ -1,23 +1,26 @@
 CC	= g++
 CFLAGS	= -Wall -g -c -std=c++11
 LDFLAGS	=
-INCLUDES = -I. -I./util
+INCLUDES = -I. -I./util -I./ssdsim
 LIBS	=
 HEADERS =
 TARGET	= run_sim
 OBJDIR	= ./obj
 
-SOURCES	=	$(wildcard *.cpp) \
+SOURCES	=	$(filter-out test_main.cpp,  $(wildcard *.cpp)) \
 			$(wildcard inilib/*.cpp) \
 			$(wildcard util/*.cpp) \
-			$(wildcard spc1_gen/*.cpp)
+			$(wildcard spc1_gen/*.cpp) \
+			$(filter-out ssdsim/test_ssdsim.cpp, $(wildcard ssdsim/*.cpp)) \
+			$(wildcard ssdsim/ftl/*.cpp) \
+			$(wildcard ssdsim/phy/*.cpp)
 
 OBJS	=	$(addprefix $(OBJDIR)/, $(SOURCES:.cpp=.o))
 
 all:	$(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS)  $(LIBS)
 
 clean:
 	-rm -f $(TARGET) $(OBJS)

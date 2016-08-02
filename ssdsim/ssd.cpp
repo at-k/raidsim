@@ -24,6 +24,19 @@ SSD::~SSD()
 	SAFE_DELETE(ftl_asyn_if);
 }
 
+bool SSD::simple_init(uint64_t ttl_phy_bytes, double op_ratio)
+{
+	const uint32_t def_channel_num = 4;
+	const uint32_t def_pkgnum_per_ch = 2;
+	const uint32_t def_dienum_per_pkg = 4;
+
+	uint64_t die_num = def_channel_num * def_pkgnum_per_ch * def_dienum_per_pkg;
+	if( ttl_phy_bytes % die_num != 0 ) {
+		ERR_AND_RTN;
+	}
+	return init(def_channel_num, def_pkgnum_per_ch, def_dienum_per_pkg, ttl_phy_bytes / die_num, op_ratio);
+}
+
 bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, uint64_t byte_per_die, double op_ratio)
 {
 	fm_info = new FM_INFO();
@@ -32,7 +45,7 @@ bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, 
     ftl_asyn_if = new FtlAsynReqInterface();
 
 	uint64_t bytes_per_pkg = die_per_pkg * byte_per_die;
-
+	//printf("hoge, %d, %d, %d, %ld\n", channel_num, pkg_per_ch, die_per_pkg, byte_per_die);
 	if( !fm_info->InitFlashModule( channel_num, pkg_per_ch, die_per_pkg, bytes_per_pkg, channel_num, 2) ) {
 		ERR_AND_RTN;
 	}
@@ -51,6 +64,7 @@ bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, 
 	if( !ftl_data->InitFTL( fm_info, usr_area_sector, ftl_if, ftl_asyn_if, &ftl_opt) ) {
 		ERR_AND_RTN;
 	}
+
 	if( ftl_if->Format() == false ) {
 		ERR_AND_RTN;
 	}
@@ -202,6 +216,7 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	ftl_opt.enable_lp_virtualization= true;
 	ftl_opt.lp_multiple_rate = 1.0 / avg_cmp_ratio;
 
+	printf("hoge\n");
 	if( !ftl_data->InitFTL( fm_info, usr_area_sector, ftl_if, ftl_asyn_if, &ftl_opt) ) {
 		ERR_AND_RTN;
 	}

@@ -23,11 +23,11 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
 {
     // 二重初期化防止
     if( l2p_tbl != NULL )
-        return false;
+		ERR_AND_RTN;
 
     if( fm_info->GetTotalSector() < usr_area_sector_num )
     {// ユーザ領域のほうがでかい
-        return false;
+		ERR_AND_RTN;
     }
 
     //-- 制御・構成パラメータの設定
@@ -63,9 +63,9 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
         pp_num = fm_info->GetPPNum(); // 物理ページ数取得
         if( pp_num != pb_num * PP_PER_PB )
         {// 削った分の調整
-            if( pp_num < pb_num * PP_PER_PB )
-                return false;
-            else
+            if( pp_num < pb_num * PP_PER_PB ) {
+				ERR_AND_RTN;
+			} else
                 pp_num = pb_num * PP_PER_PB;
         }
 
@@ -75,19 +75,19 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
         double real_op_ratio_tmp = (double)((1 - (long double)lp_num / effective_pp_num)*100);
         if( real_op_ratio_tmp < 0 )
         {
-            PrintMessage( LOG_TYPE_ERROR, "Error InitFTL : 有効な物理アドレスが不足\n" );
-            return false;
+            //PrintMessage( LOG_TYPE_ERROR, "Error InitFTL : 有効な物理アドレスが不足\n" );
+			ERR_AND_RTN;
         }else
         {
             real_op_ratio = real_op_ratio_tmp;
         }
 		// for compression
 		if( option != NULL && option->enable_lp_virtualization ) {
-			printf("%d -> ", lp_num);
+			//printf("%d -> ", lp_num);
 			lp_num *= option->lp_multiple_rate;
 		}
 
-		printf("%d \n", lp_num);
+		//printf("%d \n", lp_num);
 
     }
 
@@ -100,7 +100,6 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
 
         memset( l2p_tbl, FTL_LP_NOT_ASSIGNED, sizeof(VPA_INFO)*lp_num ); // 未割で初期化
     }
-
     //-- アクティブPGの設定
     {
         //memset( &apg, 0, sizeof(ACT_PG_INFO) );
@@ -194,7 +193,6 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
                 return false;
         }
     }
-
     return true;
 }
 
