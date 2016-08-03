@@ -61,6 +61,13 @@ typedef struct {
 	uint64_t drv_wr_sect;
 } CTL_STATISTICS;
 
+typedef struct {
+	uint64_t drv_gc_rd_count;
+	uint64_t drv_gc_wr_count;
+	uint64_t drv_gc_rd_sect;
+	uint64_t drv_gc_wr_sect;
+} CTL_COMP_STATISTICS;
+
 class Controller
 {
 	public:
@@ -75,8 +82,8 @@ class Controller
 		// controller to drive
 		virtual bool pull_next_command(DriveCommandInfo&);
 
-		void print_statistics();
-		void clear_statistics();
+		virtual void print_statistics();
+		virtual void clear_statistics();
 
 		virtual uint64_t get_max_lba() { return max_lba;}
 
@@ -104,6 +111,9 @@ class CompController : public Controller
 		virtual bool receive_command(const CommandInfo&);
 		// controller to drive
 		virtual bool pull_next_command(DriveCommandInfo&);
+
+		virtual void print_statistics();
+		virtual void clear_statistics();
 
 		void print_map();
 
@@ -176,6 +186,7 @@ class CompController : public Controller
 		uint64_t lb_num;
 		uint64_t lp_num;
 
+		CTL_COMP_STATISTICS cmp_stats;
 		// given parameter
 		double   real_data_ratio;
 		double	 avg_comp_ratio;

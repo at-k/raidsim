@@ -8,6 +8,11 @@
 #include "ssdsim/ssd.h"
 #include "util_random.h"
 
+typedef enum {
+	CTL_SIDE,
+	SSD_SIDE
+}COMP_MODE;
+
 void HowtoUse(char* bin_name)
 {
     printf("Usage: %s [options]", bin_name);
@@ -30,11 +35,14 @@ int main(int argc, char* argv[])
 {
 	// parameter
 	const uint32_t drv_num = 5;
-	const uint64_t max_drv_bytes = (uint64_t)16*(1024*1024*1024);
+	const uint64_t max_drv_bytes = (uint64_t)32*(1024*1024*1024);
 	const double   avg_cmp_ratio = 0.5;
 	const double   ctl_op_ratio  = 1.25;
 	const uint32_t ctl_cmp_chunk = 16;
 	const double   ssd_op_ratio  = 1.25;
+	const uint64_t ttl_io = 32*1024*1024 ;
+	const uint32_t io_size_sect = 16;
+	const COMP_MODE mode = CTL_SIDE;
 
 	Controller* ctl;
 	std::vector<SSD*>		ssd_list;
@@ -44,7 +52,7 @@ int main(int argc, char* argv[])
 	drv_list.resize(drv_num);
 
 	// initialization
-	if( 0 )
+	if( mode == CTL_SIDE )
 	{ // controller side compression
 		for( uint32_t i = 0; i < drv_num; i++ ) {
 			ssd_list[i] = new SSD;
@@ -59,7 +67,7 @@ int main(int argc, char* argv[])
 
 		if( !c_ctl->build_raid(RAID5, drv_list) )
 			ERR_AND_RTN;
-		if( !c_ctl->init(1/ctl_op_ratio, avg_cmp_ratio, ctl_cmp_chunk) )
+		if( !c_ctl->init(1 - 1/ctl_op_ratio, avg_cmp_ratio, ctl_cmp_chunk) )
 			ERR_AND_RTN;
 		ctl = c_ctl;
 	} else
@@ -85,7 +93,6 @@ int main(int argc, char* argv[])
 	CommandInfo cmd;
 	DriveCommandInfo drv_cmd;
 
-	const uint64_t ttl_io = 1024*1024;
 	//const uint64_t check_point = ttl_io / 10;
 	//uint64_t check_count;
 
@@ -101,7 +108,7 @@ int main(int argc, char* argv[])
 //		check_count++;
 
 		cmd.opcode = IO_WRITE;
-		cmd.sector_num = 16;
+		cmd.sector_num = io_size_sect;
 
 		cmd.lba = sim_rand64(ctl->get_max_lba() - cmd.sector_num );
 
@@ -125,9 +132,9 @@ int main(int argc, char* argv[])
 
 	//printf("\n");
 	ctl->print_statistics();
-	//for( auto s : ssd_list ) {
-
-	//}
+	for( auto s : ssd_list ) {
+		s->print_statistics();
+	}
 
 	// clean up
 	delete ctl;
@@ -139,4 +146,3 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
-

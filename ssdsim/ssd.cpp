@@ -1,3 +1,6 @@
+#include <string.h>
+#include <iostream>
+
 #include "ssd.h"
 
 #include "phy/fm_arch_info.h"
@@ -11,6 +14,7 @@
 
 SSD::SSD()
 {
+	memset(&stats, 0, sizeof(SSD_STATISTICS));
 	fm_info  = NULL;
 	ftl_data = NULL;
 	ftl_if = NULL;
@@ -82,7 +86,7 @@ bool SSD::write(uint64_t lba, uint32_t len)
 	//printf("%ld, %ld\n", start_lp, end_lp );
 	for( uint32_t lp_no = start_lp; lp_no < end_lp; lp_no++ )
 	{
-		if( lp_no == start_lp && rmw_start && !lp_read(lp_no) ) {
+		if( lp_no == start_lp && rmw_start && !lp_read(lp_no, FMT_HOST_WR) ) {
 			ERR_AND_RTN;
 		}
 
@@ -96,9 +100,13 @@ bool SSD::write(uint64_t lba, uint32_t len)
 	}
 
 	// for read modify write
-	if( start_lp != end_lp && rmw_end && !lp_read(end_lp) &&!lp_write(end_lp, FMT_HOST_WR) ) {
-		ERR_AND_RTN;
+	if( start_lp != end_lp && rmw_end ) {
+		if( !lp_read(end_lp, FMT_HOST_WR) &&!lp_write(end_lp, FMT_HOST_WR) ) {
+			ERR_AND_RTN;
+		}
 	}
+
+	stats.hcmd_wr_sect += len;
 
 	return true;
 }
@@ -112,9 +120,9 @@ bool SSD::read(uint64_t lba, uint32_t len)
 
 	for( uint32_t lp_no = start_lp; lp_no < end_lp; lp_no++ )
 	{
-		if( !lp_read(lp_no )) return false;
+		if( !lp_read(lp_no, FMT_HOST_RD )) return false;
 	}
-	if( start_lp != end_lp && rmw_end && !lp_read(end_lp) ) {
+	if( start_lp != end_lp && rmw_end && !lp_read(end_lp, FMT_HOST_RD) ) {
 		ERR_AND_RTN;
 	}
 
@@ -131,11 +139,20 @@ bool SSD::lp_write(uint64_t lp_no, FTL_FMIO_TYPE type)
 	if( !ftl_if->L2P_Update( type, lp_no, FTL_SECTS_PER_LP, pg) ) {
 		ERR_AND_RTN;
 	}
+
+	stats.fm_wr_sect += FTL_SECTS_PER_LP;
+	if( type == FMT_RCM_RWR )
+		stats.fm_gc_wr_sect += FTL_SECTS_PER_LP;
+
 	return true;
 }
 
-bool SSD::lp_read(uint64_t lp_no)
+bool SSD::lp_read(uint64_t lp_no, FTL_FMIO_TYPE type)
 {
+	stats.fm_rd_sect += FTL_SECTS_PER_LP;
+	if( type == FMT_RCM_RWR )
+		stats.fm_gc_rd_sect += FTL_SECTS_PER_LP;
+
 	return true;
 }
 
@@ -154,6 +171,10 @@ bool SSD::do_gc()
 
 		for( int i = 0; i < req_num; i++ ) {
 			uint64_t lp_no = req_list[i].lpn;
+			if( !lp_read(lp_no, FMT_RCM_RWR )) {
+				ERR_AND_RTN;
+			}
+
 			if( !lp_write(lp_no, FMT_RCM_RWR )) {
 				ERR_AND_RTN;
 			}
@@ -179,6 +200,11 @@ bool SSD::do_gc()
 
 void SSD::Dump( std::ofstream& write_file ) {
 	ftl_if->Dump( write_file );
+}
+
+void SSD::print_statistics() {
+	std::cout << "#ssd statistics, hcmd_wr_sect, fm_wr_sect, fm_gc_wr_sect" << std::endl;
+	std::cout << "," << stats.hcmd_wr_sect << "," << stats.fm_wr_sect << "," << stats.fm_gc_wr_sect << std::endl;
 }
 
 CompSSD::CompSSD()
@@ -216,7 +242,6 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	ftl_opt.enable_lp_virtualization= true;
 	ftl_opt.lp_multiple_rate = 1.0 / avg_cmp_ratio;
 
-	printf("hoge\n");
 	if( !ftl_data->InitFTL( fm_info, usr_area_sector, ftl_if, ftl_asyn_if, &ftl_opt) ) {
 		ERR_AND_RTN;
 	}
@@ -258,10 +283,20 @@ bool CompSSD::lp_write(uint64_t lp_no, FTL_FMIO_TYPE type)
 	if( !ftl_if->L2P_Update( type, lp_no, len, pg) ) {
 		ERR_AND_RTN;
 	}
+
+	stats.fm_wr_sect += len;
+	if( type == FMT_RCM_RWR )
+		stats.fm_gc_wr_sect += len;
+
 	return true;
 }
 
-bool CompSSD::lp_read(uint64_t lp_no)
+bool CompSSD::lp_read(uint64_t lp_no, FTL_FMIO_TYPE type)
 {
+	stats.fm_rd_sect += FTL_SECTS_PER_LP;
+	if( type == FMT_RCM_RWR )
+		stats.fm_gc_rd_sect += FTL_SECTS_PER_LP;
+
 	return true;
 }
+
