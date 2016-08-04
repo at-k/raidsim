@@ -1,8 +1,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <vector>
-
+#include <iostream>
 #include "sim.h"
+#include <time.h>
 
 #include "controller.h"
 #include "ssdsim/ssd.h"
@@ -34,15 +35,88 @@ bool CheckAdditionalOpt(int i, int argc, char* argv[])
 int main(int argc, char* argv[])
 {
 	// parameter
-	const uint32_t drv_num = 5;
-	const uint64_t max_drv_bytes = (uint64_t)32*(1024*1024*1024);
-	const double   avg_cmp_ratio = 0.5;
-	const double   ctl_op_ratio  = 1.25;
-	const uint32_t ctl_cmp_chunk = 16;
-	const double   ssd_op_ratio  = 1.25;
-	const uint64_t ttl_io = 32*1024*1024 ;
-	const uint32_t io_size_sect = 16;
-	const COMP_MODE mode = CTL_SIDE;
+	uint32_t drv_num = 5;
+	uint64_t max_drv_bytes = (uint64_t)32*(1024*1024*1024);
+	double   avg_cmp_ratio = 0.5;
+	double   ctl_op_ratio  = 1.25;
+	uint32_t ctl_cmp_chunk = 16;
+	double   ssd_op_ratio  = 1.25;
+	uint64_t ttl_io = 32*1024*1024 ;
+	// uint64_t ttl_io = 1 ;
+	uint32_t io_size_sect = 16;
+	COMP_MODE mode = CTL_SIDE;
+
+    { // analyze input argument
+        int i;
+        if( argc == 1 )
+        {
+            printf("#_no_opt:_load_default_parameter\n");
+        }
+        else
+        {
+            for( i = 1; i < argc; i++ )
+            {
+                if( strcmp(argv[i], "--drive_num") == 0 || strcmp(argv[i], "-d") ==0 )
+                {
+                    if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
+                    else drv_num = atoi(argv[i]);
+                }
+                else if( strcmp(argv[i], "--max_drive_bytes") == 0 || strcmp(argv[i], "-b") ==0 )
+                {
+                    if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+                    else max_drv_bytes = std::stoull(argv[i]);
+                }
+				else if( strcmp(argv[i], "--avg_cmp_ratio") == 0 || strcmp(argv[i], "-c") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else avg_cmp_ratio = std::stod(argv[i]);
+				}
+				else if( strcmp(argv[i], "--comp_mode") == 0 || strcmp(argv[i], "-m") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else if( strcmp(argv[i], "c") == 0 )
+						mode = CTL_SIDE;
+					else if( strcmp(argv[i], "s") == 0 )
+						mode = SSD_SIDE;
+					else {
+						printf("invalid option for mode%s\n", argv[i] );
+						return false;
+					}
+				}
+				else if( strcmp(argv[i], "--ctl_op_ratio") == 0 || strcmp(argv[i], "-R") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else ctl_op_ratio = std::stod(argv[i]);
+                }
+				else if( strcmp(argv[i], "--ctl_cmp_chunk") == 0 || strcmp(argv[i], "-C") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else ctl_cmp_chunk = std::stol(argv[i]);
+				}
+				else if( strcmp(argv[i], "--ssd_op_ratio") == 0 || strcmp(argv[i], "-r") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else ssd_op_ratio = std::stod(argv[i]);
+                }
+				else if( strcmp(argv[i], "--ttl_io_cnt") == 0 || strcmp(argv[i], "-i") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+					else ttl_io = std::stoll(argv[i]);
+                }
+                else if( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
+                {
+                    HowtoUse(argv[0]);
+                    return 0;
+                }
+                else
+                {
+                    printf("Invalid option -- %s\n", argv[i]);
+                    HowtoUse(argv[0]);
+                    return 0;
+                }
+            }
+        }
+    }
 
 	Controller* ctl;
 	std::vector<SSD*>		ssd_list;
@@ -50,6 +124,15 @@ int main(int argc, char* argv[])
 
 	ssd_list.resize(drv_num);
 	drv_list.resize(drv_num);
+
+	time_t now = time(NULL);
+	struct tm *pnow = localtime(&now);
+	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
+
+	// print settings
+	std::cout << "#settings, mode, dnum, max_dbytes, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io" << std::endl;
+	std::cout << "," << (mode == CTL_SIDE ? "C" : "S") << "," << drv_num << ","<< max_drv_bytes << ","<< avg_cmp_ratio
+		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << std::endl;
 
 	// initialization
 	if( mode == CTL_SIDE )
@@ -143,6 +226,10 @@ int main(int argc, char* argv[])
 	ssd_list.clear();
 	for( auto d : drv_list )
 		delete d;
+
+	now = time(NULL);
+	pnow = localtime(&now);
+	std::cout << "#end time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
 
 	return 0;
 }

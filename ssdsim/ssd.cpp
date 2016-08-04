@@ -203,8 +203,8 @@ void SSD::Dump( std::ofstream& write_file ) {
 }
 
 void SSD::print_statistics() {
-	std::cout << "#ssd statistics, hcmd_wr_sect, fm_wr_sect, fm_gc_wr_sect" << std::endl;
-	std::cout << "," << stats.hcmd_wr_sect << "," << stats.fm_wr_sect << "," << stats.fm_gc_wr_sect << std::endl;
+	std::cout << "#ssd statistics, max_lba, phy_sects, hcmd_wr_sect, fm_wr_sect, fm_gc_wr_sect" << std::endl;
+	std::cout << "," << max_lba << "," << fm_info->GetTotalSector() << "," << stats.hcmd_wr_sect << "," << stats.fm_wr_sect << "," << stats.fm_gc_wr_sect << std::endl;
 }
 
 CompSSD::CompSSD()
@@ -237,7 +237,7 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	FTL_EXT_OPT ftl_opt;
 	ftl_opt.enable_rcm_th = false;
 	ftl_opt.enable_pg_composition = true;
-	ftl_opt.pg_pb_num = 32;
+	ftl_opt.pg_pb_num = 8;
 	ftl_opt.pg_parity_num = 0;
 	ftl_opt.enable_lp_virtualization= true;
 	ftl_opt.lp_multiple_rate = 1.0 / avg_cmp_ratio;

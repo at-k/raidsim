@@ -185,8 +185,8 @@ void Controller::record_statis(const DriveCommandInfo& cmd)
 }
 void Controller::print_statistics()
 {
-	std::cout << "#controller statistics, hcmd_cnt, hcmd_rd_cnt, hcmd_wr_cnt, hcmd_rd_sect, hcmd_wr_sect, dcmd_cnt, dcmd_rd_cnt, dcmd_wr_cnt, dcmd_rd_sect, dcmd_wr_sect " << std::endl;
-	std::cout << "," << stats.hcmd_count <<","<<stats.hcmd_rd_count <<","<<stats.hcmd_wr_count << ","
+	std::cout << "#controller statistics, max_lba, hcmd_cnt, hcmd_rd_cnt, hcmd_wr_cnt, hcmd_rd_sect, hcmd_wr_sect, dcmd_cnt, dcmd_rd_cnt, dcmd_wr_cnt, dcmd_rd_sect, dcmd_wr_sect " << std::endl;
+	std::cout << "," << get_max_lba() << "," << stats.hcmd_count <<","<<stats.hcmd_rd_count <<","<<stats.hcmd_wr_count << ","
 		<< stats.hcmd_rd_sect << "," << stats.hcmd_wr_sect << ","<<stats.drvcmd_count << ","
 		<< stats.drv_rd_count<<","<<stats.drv_wr_count<<","<<stats.drv_rd_sect<<","<<stats.drv_wr_sect<<"\n";
 }
@@ -539,8 +539,8 @@ inline void CompController::update_lb_list(LOGBLOCK* lb)
 
 void CompController::print_statistics()
 {
-	std::cout << "#comp_controller statistics, gc_rd_cnt, gc_wr_cnt, gc_rd_sect, gc_wr_sect" << std::endl;
-	std::cout << "," << cmp_stats.drv_gc_rd_count << "," << cmp_stats.drv_gc_wr_count << ","
+	std::cout << "#comp_controller statistics, virutal_max_lba, gc_rd_cnt, gc_wr_cnt, gc_rd_sect, gc_wr_sect" << std::endl;
+	std::cout << "," << virtual_max_lba << "," << cmp_stats.drv_gc_rd_count << "," << cmp_stats.drv_gc_wr_count << ","
 		<< cmp_stats.drv_gc_rd_sect << "," << cmp_stats.drv_gc_wr_sect << std::endl;
 	Controller::print_statistics();
 }
