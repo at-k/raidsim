@@ -26,6 +26,7 @@
 #define FTL_PG_BLOCK_NUM      32               // Block RAID(N in NDxP)
 #define FTL_PG_PARITY_NUM     0                // Block RAID(x in NDxP)
 #define FTL_SECTS_PER_LP      16               // LP sector size
+//#define FTL_SECTS_PER_LP      8               // LP sector size
 
 #define FTL_OPENPG_NUM        1	               // open pg number
 #define FTL_OPENPG_WL_NUM     7                // open pg for special

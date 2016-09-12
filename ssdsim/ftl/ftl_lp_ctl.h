@@ -35,7 +35,7 @@ class FtlInterface
 		//         変更対象の論理ページ
 		//         書き込み先の物理PG番号
 		//   返値：失敗すれば，未割り当てを返す
-		virtual bool L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar len, FTL_PG_GADDR pg_no );
+		virtual bool L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar len, FTL_PG_GADDR pg_no, uint32_t& written_size, bool aligh_to_pp = false);
 
 		//-- ブロック消去関数
 		//   引数：消去対象の物理ブロック番号

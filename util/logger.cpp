@@ -129,6 +129,8 @@ void PrintMessage( const char *type, const char *fmt, ... )
 {
     std::map<std::string, LOG_FILE_INFO>::iterator itr;
 
+	if(logger == NULL || logger->flist.empty() ) return;
+
     // key ‚Ìƒtƒ@ƒCƒ‹‚ğ’T‚·
     itr = logger->flist.find( type );
     if( itr != logger->flist.end() )

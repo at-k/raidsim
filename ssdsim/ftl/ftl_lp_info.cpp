@@ -36,7 +36,7 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
         pg_pb_num = FTL_PG_BLOCK_NUM;
         pg_parity_num = FTL_PG_PARITY_NUM;
         pg_cw_num = ((pg_pb_num - pg_parity_num) * PP_PER_PB * CW_PER_PP);
-        rcm_th    = 0; // minimum
+        rcm_th    = 1; // minimum %
 
         if( option != NULL )
         {
@@ -70,9 +70,10 @@ bool LP_INFO::InitFTL( FM_INFO* fm_info, uint64_t usr_area_sector_num,
         }
 
         lp_num   = (uint32_t)(usr_area_sector_num / FTL_SECTS_PER_LP); // 論理ページ数取得
-        op_ratio = (double)((1 - (long double)lp_num / pp_num)*100);  // OP率計算
+        op_ratio = (double)((1 - (long double)usr_area_sector_num / (pp_num*SECTS_PER_PP))*100);  // OP率計算
+
         FTL_PP_GADDR effective_pp_num = pp_num * (pg_pb_num - pg_parity_num ) / pg_pb_num;
-        double real_op_ratio_tmp = (double)((1 - (long double)lp_num / effective_pp_num)*100);
+        double real_op_ratio_tmp = (double)((1 - (long double)usr_area_sector_num / (effective_pp_num*SECTS_PER_PP))*100);
         if( real_op_ratio_tmp < 0 )
         {
             //PrintMessage( LOG_TYPE_ERROR, "Error InitFTL : 有効な物理アドレスが不足\n" );

@@ -27,6 +27,7 @@ typedef unsigned long long int uint64_t;
 
 // simple error trace
 #define ERR_AND_RTN { printf( HERE "error\n"); return false; }
+#define ERR { printf( HERE "error\n");}
 
 #define ERROR(fmt, ...) \
   error_at_line(-(__LINE__), errno, __FILE__, __LINE__, fmt, ## __VA_ARGS__)

@@ -45,6 +45,8 @@ int main(int argc, char* argv[])
 	// uint64_t ttl_io = 1 ;
 	uint32_t io_size_sect = 16;
 	COMP_MODE mode = CTL_SIDE;
+	std::string trace_file = "osdb_comp_trace.txt";
+	bool single_ssd_mode = true;
 
     { // analyze input argument
         int i;
@@ -98,11 +100,16 @@ int main(int argc, char* argv[])
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
 					else ssd_op_ratio = std::stod(argv[i]);
                 }
-				else if( strcmp(argv[i], "--ttl_io_cnt") == 0 || strcmp(argv[i], "-i") ==0 )
-				{
-					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
-					else ttl_io = std::stoll(argv[i]);
-                }
+				//else if( strcmp(argv[i], "--ttl_io_cnt") == 0 || strcmp(argv[i], "-i") ==0 )
+				//{
+				//	if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+				//	else ttl_io = std::stoll(argv[i]);
+                //}
+                else if( strcmp(argv[i], "--trace_file") == 0 || strcmp(argv[i], "-t") ==0 )
+                {
+                    if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
+                    else trace_file = argv[i];
+				}
                 else if( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
                 {
                     HowtoUse(argv[0]);
@@ -121,6 +128,7 @@ int main(int argc, char* argv[])
 	Controller* ctl;
 	std::vector<SSD*>		ssd_list;
 	std::vector<DriveInfo*> drv_list;
+	CompEngine				cmp_engine;
 
 	ssd_list.resize(drv_num);
 	drv_list.resize(drv_num);
@@ -130,11 +138,14 @@ int main(int argc, char* argv[])
 	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
 
 	// print settings
-	std::cout << "#settings, mode, dnum, max_dbytes, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io" << std::endl;
+	std::cout << "#settings, mode, dnum, max_dbytes, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io, comp_trace" << std::endl;
 	std::cout << "," << (mode == CTL_SIDE ? "C" : "S") << "," << drv_num << ","<< max_drv_bytes << ","<< avg_cmp_ratio
-		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << std::endl;
+		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << "," << trace_file << std::endl;
 
 	// initialization
+	if( !cmp_engine.init_engine(trace_file.c_str()) )
+		ERR_AND_RTN;
+
 	if( mode == CTL_SIDE )
 	{ // controller side compression
 		for( uint32_t i = 0; i < drv_num; i++ ) {
@@ -150,14 +161,17 @@ int main(int argc, char* argv[])
 
 		if( !c_ctl->build_raid(RAID5, drv_list) )
 			ERR_AND_RTN;
-		if( !c_ctl->init(1 - 1/ctl_op_ratio, avg_cmp_ratio, ctl_cmp_chunk) )
+		if( !c_ctl->init(&cmp_engine, 1 - 1/ctl_op_ratio, ctl_cmp_chunk) )
 			ERR_AND_RTN;
 		ctl = c_ctl;
 	} else
 	{ // ssd side compression
 		for( uint32_t i = 0; i < drv_num; i++ ) {
 			CompSSD* c_ssd = new CompSSD;
-			if( !c_ssd->setup_cmp_engine(avg_cmp_ratio) )
+			bool enable_virt = true;
+			uint32_t buffered_page_num = 4;
+
+			if( !c_ssd->setup_compression(enable_virt, &cmp_engine, A_CC_FTL, buffered_page_num ) )
 				ERR_AND_RTN;
 			if( !c_ssd->simple_init( max_drv_bytes, ssd_op_ratio ) )
 				ERR_AND_RTN;
@@ -181,6 +195,8 @@ int main(int argc, char* argv[])
 
 	sim_srand(0);
 
+	ttl_io = ctl->get_lp_num() * 2;
+
 	for( uint64_t i = 0; i < ttl_io; i++ )
 	{
 	//	if( check_count > check_point ) {
@@ -198,8 +214,12 @@ int main(int argc, char* argv[])
 		if( !ctl->receive_command( cmd) )
 			return false;
 
-		while( ctl->pull_next_command(drv_cmd) ){
+		while( ctl->pull_next_command(drv_cmd) )
+		{
 			CommandInfo& cmd2drv = drv_cmd.cmd_info;
+			if( single_ssd_mode && drv_cmd.tgt_drive != 0 )
+				continue;
+
 			if( cmd2drv.opcode == IO_WRITE  ) {
 				if( !ssd_list[drv_cmd.tgt_drive]->write(cmd2drv.lba, cmd2drv.sector_num) ) {
 					ERR_AND_RTN;
@@ -215,8 +235,12 @@ int main(int argc, char* argv[])
 
 	//printf("\n");
 	ctl->print_statistics();
-	for( auto s : ssd_list ) {
-		s->print_statistics();
+	if( single_ssd_mode )
+		ssd_list[0]->print_statistics();
+	else {
+		for( auto s : ssd_list ) {
+			s->print_statistics();
+		}
 	}
 
 	// clean up

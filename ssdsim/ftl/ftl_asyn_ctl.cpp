@@ -1,3 +1,4 @@
+#include <iostream>
 #include "ftl_lp_info.h"
 #include "ftl_lp_ctl.h"
 #include "ftl_lp_func.h"
@@ -13,11 +14,15 @@ bool FtlAsynReqInterface::Init( LP_INFO* _lp_info, FM_INFO* _fm_info, FtlInterfa
         return false;
 
     // RCM開始閾値の設定
-    rcm_start_th    = (FTL_PB_GADDR)(((lp_info->pb_num*lp_info->op_ratio)/100) * lp_info->rcm_th / 100 );
+    //rcm_start_th    = (FTL_PB_GADDR)(((lp_info->pb_num*lp_info->op_ratio)/100) * lp_info->rcm_th / 100 );
+    rcm_start_th    = (FTL_PB_GADDR)(lp_info->pb_num * lp_info->rcm_th / 100 );
     if( rcm_start_th <= _ftl_if->GetOpenPG_Num() * lp_info->pg_pb_num )
     {// 最低でも2回分は確保
         rcm_start_th = _ftl_if->GetOpenPG_Num() * lp_info->pg_pb_num * 2;
     }
+
+	//std::cout<< "th " << rcm_start_th << "," << lp_info->pb_num << "," << lp_info->op_ratio << "," <<
+	//	lp_info->rcm_th << std::endl;
 
     // pre_free_pb_num = 0;
 
@@ -96,8 +101,13 @@ int FtlAsynReqInterface::GetReWriteReq( REVERSE_INFO req_list[FTL_MAX_REWR_REQ] 
         {// 最後までやりきった
             lp_info->apg.rcm_pg_que.pop_front();
             lp_info->apg.rcm_cmp_pg_que.push_back( pg );
+			//std::cout<<pg->next_ofs <<"," << pg->vs_num <<"," <<pg->lp_num <<std::endl;
         }
     }
+
+//	if( req_num != 0 ) {
+//		std::cout << "free:" << lp_info->pool.total_free_pb_count << std::endl;
+//	}
 
     return req_num;
 }
@@ -188,12 +198,12 @@ inline REVERSE_INFO FtlAsynReqInterface::GetNextReWriteLPN( PG_INFO* pg_info )
         pg_info->next_rewr_index ++;
         //pg_info->next_rewr_pgsect += ExtractVpaLength(lpn);
         pg_info->next_rewr_pgsect += rev.len;
-
         if( vpa.pgn == pg_info->id && vpa.ofs == ofs ) // 逆引きと正引きの突き合わせ
         {
             rev_rtn = rev;
             break;
         }
+
     }
 
     return rev_rtn;

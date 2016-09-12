@@ -1,5 +1,6 @@
 #include "controller.h"
 #include "common_def.h"
+#include "ssdsim/ssd.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -235,14 +236,15 @@ CompController::~CompController()
 	if( lbt != NULL ) delete[] lbt;
 }
 
-bool CompController::init(double gc_buffer_ratio, double _avg_comp_ratio, uint64_t chunk_sector_size)
+bool CompController::init(CompEngine* _cmp_engine, double gc_buffer_ratio, uint64_t chunk_sector_size)
 {
 	if( lpt != NULL || lbt != NULL )
 		ERR_AND_RTN;
 
 	// test parameter
 	real_data_ratio = 1 - gc_buffer_ratio;
-	avg_comp_ratio = _avg_comp_ratio;
+	cmp_engine = _cmp_engine;
+	avg_comp_ratio = cmp_engine->get_avg_cmp_ratio();
 	lb_size = rg_list.front().stripe_width;
 	lp_size = chunk_sector_size;
 
@@ -303,7 +305,6 @@ bool CompController::init(double gc_buffer_ratio, double _avg_comp_ratio, uint64
 	}
 
 	destage_tgt.clear();
-
 
 	return true;
 }
@@ -519,7 +520,7 @@ bool CompController::do_gc()
 }
 uint32_t CompController::do_compression( uint32_t org_data_size )
 {
-	return org_data_size *  avg_comp_ratio;
+	return org_data_size *  cmp_engine->get_next_ratio();
 }
 
 inline uint64_t CompController::calc_lp_no(uint64_t host_lba)

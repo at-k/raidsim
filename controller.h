@@ -98,13 +98,15 @@ class Controller
 		virtual void record_statis(const DriveCommandInfo& cmd);
 };
 
+class CompEngine;
+
 class CompController : public Controller
 {
 	public:
 		CompController();
 		virtual ~CompController();
 
-		bool init(double gc_buffer_ratio = 0.8, double avg_comp_ratio = 0.5, uint64_t chunk_sector_size = 16);
+		bool init(CompEngine* cmp_engine, double gc_buffer_ratio = 0.8, uint64_t chunk_sector_size = 16);
 
 		virtual uint64_t get_max_lba(){ return virtual_max_lba;}
 		// host to controller
@@ -114,6 +116,8 @@ class CompController : public Controller
 
 		virtual void print_statistics();
 		virtual void clear_statistics();
+
+		uint64_t get_lp_num() { return lp_num;}
 
 		void print_map();
 
@@ -173,6 +177,7 @@ class CompController : public Controller
 			>
 		> LB_SORTED_LIST;
 		//typedef LB_SORTED_LIST::index<free_sector>::type::iterator LB_ITR;
+		CompEngine* cmp_engine;
 
 		BUFINFO		buf;
 		LPMAP*		lpt;

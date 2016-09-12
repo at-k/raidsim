@@ -1,6 +1,6 @@
 
 #include "common_def.h"
-
+#include <iostream>
 #include "ftl_lp_ctl.h"
 #include "ftl_lp_info.h"
 #include "ftl_lp_func.h"
@@ -31,8 +31,10 @@ FTL_PG_GADDR FtlInterface::GetOpenPG ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no )
         if( lp_info->apg.host_openpg[ hostpg_index ] == NULL )
         {
             lp_info->apg.host_openpg[ hostpg_index ] = BuildPG( type, hostpg_index );
-            if( lp_info->apg.host_openpg[ hostpg_index ] == NULL ) // 取得失敗
+            if( lp_info->apg.host_openpg[ hostpg_index ] == NULL ) {// 取得失敗
+				ERR;
                 return FTL_PG_INVALID_ID;
+			}
         }
         pg_no = lp_info->apg.host_openpg[ hostpg_index ]->id; // 割り当て
         hostpg_index = ROUNDROBIN( hostpg_index, FTL_OPENPG_NUM );
@@ -42,8 +44,10 @@ FTL_PG_GADDR FtlInterface::GetOpenPG ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no )
         if( lp_info->apg.rcm_openpg[ rcmpg_index ] == NULL )
         {
             lp_info->apg.rcm_openpg[ rcmpg_index ] = BuildPG( type, rcmpg_index );
-            if( lp_info->apg.rcm_openpg[ rcmpg_index ] == NULL ) // 取得失敗
+            if( lp_info->apg.rcm_openpg[ rcmpg_index ] == NULL ) {// 取得失敗
+				ERR;
                 return FTL_PG_INVALID_ID;
+			}
         }
         pg_no = lp_info->apg.rcm_openpg[ rcmpg_index ]->id; // 割り当て
         rcmpg_index = ROUNDROBIN( rcmpg_index, FTL_OPENPG_NUM );
@@ -58,7 +62,7 @@ FTL_PG_GADDR FtlInterface::GetOpenPG ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no )
 
 
 //-- 論物更新
-bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar len, FTL_PG_GADDR pg_no )
+bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar len, FTL_PG_GADDR pg_no, uint32_t& written_size, bool align_to_pp )
 {
     PG_INFO* pg_dst_info;   // 書込先パリティグループ
     PG_INFO* pg_src_info;   // 前のパリティグループ
@@ -80,17 +84,27 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
     // ---- エラー処理
     if( pg_dst_info->status != FTL_PGS_OPEN )
     {// OpenしていないPGを指定
-        PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: pg state violation\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: pg state violation\n" );
+		ERR;
         return false;
     } else if( pg_dst_info->next_ofs + len > lp_info->pg_cw_num )
     {// 書き込む余地無いブロックを指定
-        PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: no free space\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: no free space\n" );
+		ERR;
         return false;
     } else if( pg_src_info != NULL && pg_src_info->vs_num < vpa_src.len )
     {// 旧PGの情報がマッチしない
-        PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: unmatch write source information\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: unmatch write source information\n" );
+		ERR;
         return false;
     }
+
+	uint32_t pad = 0;
+	if( align_to_pp ) {
+		uint32_t ofs = pg_dst_info->next_ofs + len;
+		pad = ( (ofs % SECTS_PER_PP) == 0 ? 0 : (SECTS_PER_PP - ofs % SECTS_PER_PP) );
+	//	len += pad;
+	}
 
     // ---- 書き先更新
     lp_info->l2p_tbl[ lp_no ].pgn = pg_no;
@@ -99,28 +113,44 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
 
     // 逆引き作成
     rev_info.lpn = lp_no;
-    rev_info.len = len;
+    rev_info.len = len + pad;
+    //rev_info.len = len;
 
     // 書き先PGの情報更新
+	uint32_t start_ofs =  pg_dst_info->next_ofs;
     pg_dst_info->p2l_tbl.push_back( rev_info ); // 逆引き登録
-    pg_dst_info->next_ofs += len;
+    pg_dst_info->next_ofs += (len+pad);
     pg_dst_info->vs_num += len; // 有効セクタ数
     pg_dst_info->lp_num ++;     // 参照論理ページ数
 
-    if( pg_dst_info->next_ofs + FTL_SECTS_PER_LP >= lp_info->pg_cw_num*SECTS_PER_CW )
+
+    if( pg_dst_info->next_ofs + FTL_SECTS_PER_LP >= lp_info->pg_cw_num * SECTS_PER_CW )
     {// close pg remaining one Lp space
+		//std::cout <<"hoge"<<std::endl;
+		pg_dst_info->next_ofs  = lp_info->pg_cw_num * SECTS_PER_CW;
         if( OpenToClose( pg_dst_info ) == false )
         {
-            PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: ブロックライト完遷移失敗\n" );
+            //PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: ブロックライト完遷移失敗\n" );
+			ERR;
             return false;
         }
     }
+	written_size = pg_dst_info->next_ofs - start_ofs;
 
     // ---- 書き元更新
     if( pg_src_info != NULL )
     {
+		if( pg_src_info->lp_num == 0 ) {
+			printf("invalid status: %d, %d, %d, %d, %d\n", pg_src_info->id, pg_src_info->lp_num, pg_src_info->next_ofs, pg_src_info->status, pg_src_info->vs_num );
+			printf("lp info: %d, %d, %d\n", lp_no, len, pg_no);
+			return true;
+		}
         pg_src_info->vs_num -= vpa_src.len;
         pg_src_info->lp_num --;
+
+		if( pg_src_info->lp_num == 0 && pg_src_info->vs_num != 0 ) {
+			printf("invalid status: %d, %d, %d, %d, %d\n", pg_src_info->id, pg_src_info->lp_num, pg_src_info->next_ofs, pg_src_info->status, pg_src_info->vs_num );
+		}
 
         if( pg_src_info->vs_num != 0 )
         {
@@ -128,7 +158,8 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
             {// close PG
                 if( UpdateCloseRanking( pg_src_info ) == false )
                 {
-                    PrintMessage( LOG_TYPE_ERROR, "Error L2p_Update: closeキュー更新失敗\n");
+                    //PrintMessage( LOG_TYPE_ERROR, "Error L2p_Update: closeキュー更新失敗\n");
+					ERR;
                     return false;
                 }
             }
@@ -138,7 +169,8 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
             {// 全無効化
                 if( CloseToInvalid( pg_src_info ) == false )
                 {
-                    PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: close->invalid失敗\n");
+                    //PrintMessage( LOG_TYPE_ERROR, "Error L2P_Update: close->invalid失敗\n");
+					ERR;
                     return false;
                 }
             }
@@ -213,7 +245,8 @@ PG_INFO* FtlInterface::BuildPG ( FTL_FMIO_TYPE type, uint32_t id )
 
     if( lp_info->free_pg_que.empty() )
     {// 空きPGが無い
-        PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: no free space\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: no free space\n" );
+		ERR;
         return NULL;
     }
     // 空きを取り出し & 削除
@@ -226,28 +259,28 @@ PG_INFO* FtlInterface::BuildPG ( FTL_FMIO_TYPE type, uint32_t id )
     // ブロック取りだし
     for( uint32_t i = 0; i < lp_info->pg_pb_num; i++ )
     {
-        static int aho = 0;
-        if( type == FMT_RCM_RWR )
-            aho ++;
-        if( aho == 8 )
-            aho = 0;
+        //static int aho = 0;
+        //if( type == FMT_RCM_RWR )
+        //    aho ++;
+        //if( aho == 8 )
+        //    aho = 0;
 
         pb = GetFreePB( type );
         if( pb == NULL )
         {
-            if( lp_info->pool.total_free_pb_count == 0 )
-            {// 空きブロック無し，ブロック枯渇
-                PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: no free space\n" );
-            }else
-            {
-                PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: fail to get block\n" );
+            if( lp_info->pool.total_free_pb_count == 0 ) {// 空きブロック無し，ブロック枯渇
+                //PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: no free space\n" );
+				ERR;
+            }else{
+                //PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: fail to get block\n" );
+				ERR;
             }
             return NULL;
         }
-        if( pb->pg_no != FTL_PG_INVALID_ID || pb->status != FTL_PBS_FREE )
-        {
-            PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: block state violation\n");
-            return NULL;
+        if( pb->pg_no != FTL_PG_INVALID_ID || pb->status != FTL_PBS_FREE ) {
+            //PrintMessage( LOG_TYPE_ERROR, "Error BuildPG: block state violation\n");
+            ERR;
+			return NULL;
         }
 
         pg->pb_list[i] = pb;
@@ -351,7 +384,9 @@ bool FtlInterface::CloseToInvalid( PG_INFO* pg_info )
 {
     if( (pg_info->status != FTL_PGS_RCM && pg_info->status != FTL_PGS_CLOSE) || pg_info->vs_num != 0 )
     {// !rcm or !close  or そもそも有効データ抱えてる場合
-        PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 状態不整合\n" );
+        //PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 状態不整合\n" );
+		printf("invalid status: %d, %d, %d, %d, %d\n", pg_info->id, pg_info->lp_num, pg_info->next_ofs, pg_info->status, pg_info->vs_num );
+		ERR;
         return false;
     }
 
@@ -362,7 +397,8 @@ bool FtlInterface::CloseToInvalid( PG_INFO* pg_info )
         pb = pg_info->pb_list[i];
         if( pb == NULL || pb->status != FTL_PBS_BIND )
         {
-            PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: ブロック状態不整合\n");
+            //PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: ブロック状態不整合\n");
+			ERR;
             return false;
         }
 
@@ -390,7 +426,8 @@ bool FtlInterface::CloseToInvalid( PG_INFO* pg_info )
                 lp_info->apg.rcm_pg_que.erase( it );
             }else
             {
-                PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 対象(rcm) not found\n");
+                //PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 対象(rcm) not found\n");
+				ERR;
                 return false;
             }
         }
@@ -398,7 +435,8 @@ bool FtlInterface::CloseToInvalid( PG_INFO* pg_info )
     {// closeキュー
         if( pg_info->que.head != &lp_info->apg.close_pg_que )
         {
-            PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 対象(close) not found\n");
+            //PrintMessage( LOG_TYPE_ERROR, "Error CloseToInvalid: 対象(close) not found\n");
+			ERR;
             return false;
         }
         remove_item( &lp_info->apg.close_pg_que, &pg_info->que );
@@ -425,7 +463,8 @@ bool FtlInterface::Format(bool enable_comp, double comp_ratio)
         if( addr == FTL_PG_INVALID_ID )
             return false;
 
-        if ( L2P_Update( FMT_HOST_WR, lp_no, len, addr) == false )
+		uint32_t written_size;
+        if ( L2P_Update( FMT_HOST_WR, lp_no, len, addr, written_size) == false )
             return false;
     }
 
