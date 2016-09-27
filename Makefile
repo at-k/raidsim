@@ -1,5 +1,6 @@
 CC	= g++
-CFLAGS	= -Wall -g -c -std=c++11
+#CFLAGS	= -Wall -g -c -std=c++11
+CFLAGS	= -Wall -O2 -c -std=c++11
 LDFLAGS	=
 INCLUDES = -I. -I./util -I./ssdsim
 LIBS	=

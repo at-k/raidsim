@@ -46,6 +46,7 @@ class SSD {
 
 		inline uint64_t get_max_lba() { return max_lba;}
 		inline uint64_t get_max_lpn() { return max_lba / FTL_SECTS_PER_LP;}
+		inline uint64_t get_phy_sect() { return phy_sects;}
 
 		virtual void Dump( std::ofstream& write_file );
 		virtual void print_statistics();
@@ -57,7 +58,9 @@ class SSD {
 		virtual bool do_gc();
 
 		uint64_t max_lba;
+		uint64_t phy_sects;
 		SSD_STATISTICS stats;
+		double op_ratio;
 
 		FM_INFO*      fm_info;
 		LP_INFO*      ftl_data;
@@ -75,7 +78,7 @@ class CompEngine {
 		uint32_t get_next_length();
 		double get_next_ratio();
 
-		double get_avg_cmp_ratio() { return (double) avg_comp_size / org_chunk_size;}
+		double get_avg_cmp_ratio() { return avg_comp_ratio;}
 
 	private:
 		std::vector<uint32_t> data_list;

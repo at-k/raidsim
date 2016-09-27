@@ -32,11 +32,13 @@ SSD::~SSD()
 	SAFE_DELETE(ftl_asyn_if);
 }
 
-bool SSD::simple_init(uint64_t ttl_phy_bytes, double op_ratio)
+bool SSD::simple_init(uint64_t ttl_phy_bytes, double _op_ratio)
 {
 	const uint32_t def_channel_num = 4;
 	const uint32_t def_pkgnum_per_ch = 2;
 	const uint32_t def_dienum_per_pkg = 4;
+
+	op_ratio = _op_ratio;
 
 	uint64_t die_num = def_channel_num * def_pkgnum_per_ch * def_dienum_per_pkg;
 	if( ttl_phy_bytes % die_num != 0 ) {
@@ -45,12 +47,14 @@ bool SSD::simple_init(uint64_t ttl_phy_bytes, double op_ratio)
 	return init(def_channel_num, def_pkgnum_per_ch, def_dienum_per_pkg, ttl_phy_bytes / die_num, op_ratio);
 }
 
-bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, uint64_t byte_per_die, double op_ratio)
+bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, uint64_t byte_per_die, double _op_ratio)
 {
 	fm_info = new FM_INFO();
     ftl_data = new LP_INFO();
     ftl_if = new FtlInterface();
     ftl_asyn_if = new FtlAsynReqInterface();
+
+	op_ratio = _op_ratio;
 
 	uint64_t bytes_per_pkg = die_per_pkg * byte_per_die;
 	//printf("hoge, %d, %d, %d, %ld\n", channel_num, pkg_per_ch, die_per_pkg, byte_per_die);
@@ -62,11 +66,13 @@ bool SSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, 
 	usr_area_sector = fm_info->GetTotalSector() / op_ratio ;
 	usr_area_sector += ( (usr_area_sector % SECTS_PER_PP) == 0 ? 0:(SECTS_PER_PP - usr_area_sector % SECTS_PER_PP ) ); // ページで割り切れるように調製
 
+	phy_sects = fm_info->GetTotalSector();
+
 	FTL_EXT_OPT ftl_opt;
 	ftl_opt.enable_lp_virtualization= false;
 	ftl_opt.enable_rcm_th = false;
 	ftl_opt.enable_pg_composition = true;
-	ftl_opt.pg_pb_num = 2;
+	ftl_opt.pg_pb_num = 1;
 	ftl_opt.pg_parity_num = 0;
 
 	if( !ftl_data->InitFTL( fm_info, usr_area_sector, ftl_if, ftl_asyn_if, &ftl_opt) ) {
@@ -130,6 +136,8 @@ bool SSD::read(uint64_t lba, uint32_t len)
 		ERR_AND_RTN;
 	}
 
+	stats.hcmd_rd_sect += len;
+
 	return true;
 }
 
@@ -145,18 +153,25 @@ bool SSD::lp_write(uint64_t lp_no, FTL_FMIO_TYPE type)
 		ERR_AND_RTN;
 	}
 
+	stats.fm_wr_count++;
+
 	stats.fm_wr_sect += written_size;
-	if( type == FMT_RCM_RWR )
+	if( type == FMT_RCM_RWR ) {
+		stats.fm_gc_wr_count++;
 		stats.fm_gc_wr_sect += written_size;
+	}
 
 	return true;
 }
 
 bool SSD::lp_read(uint64_t lp_no, FTL_FMIO_TYPE type)
 {
+	stats.fm_rd_count++;
 	stats.fm_rd_sect += FTL_SECTS_PER_LP;
-	if( type == FMT_RCM_RWR )
+	if( type == FMT_RCM_RWR ) {
+		stats.fm_gc_rd_count++;
 		stats.fm_gc_rd_sect += FTL_SECTS_PER_LP;
+	}
 
 	return true;
 }
@@ -212,8 +227,12 @@ void SSD::Dump( std::ofstream& write_file ) {
 }
 
 void SSD::print_statistics() {
-	std::cout << "#ssd statistics, max_lba, phy_sects, hcmd_wr_sect, fm_wr_sect, fm_gc_wr_sect, fm_rd_sect, fm_gc_rd_sect, fm_gc_wr_count, fm_gc_rd_count"  << std::endl;
-	std::cout << "," << max_lba << "," << fm_info->GetTotalSector() << "," << stats.hcmd_wr_sect << "," << stats.fm_wr_sect << "," << stats.fm_gc_wr_sect << "," << stats.fm_rd_sect << "," << stats.fm_gc_rd_sect << "," << stats.fm_gc_wr_count << "," << stats.fm_gc_rd_count << std::endl;
+	std::cout << "#ssd statistics, max_lba, phy_sects, op_ratio, hcmd_wr_sect, hcmd_rd_sect, fm_wr_sect, fm_gc_wr_sect, fm_rd_sect, fm_gc_rd_sect, fm_gc_wr_count, fm_gc_rd_count, wa, ra"  << std::endl;
+	std::cout << "," << max_lba << "," << fm_info->GetTotalSector() << "," << op_ratio << "," << stats.hcmd_wr_sect << ","  << stats.hcmd_rd_sect << ","
+		<< stats.fm_wr_sect << "," << stats.fm_gc_wr_sect << "," << stats.fm_rd_sect << "," << stats.fm_gc_rd_sect << "," << stats.fm_gc_wr_count << ","
+		<< stats.fm_gc_rd_count << "," <<
+		(stats.hcmd_wr_sect != 0 ? ((double)stats.fm_wr_sect / stats.hcmd_wr_sect):0) << "," <<
+		(stats.hcmd_rd_sect != 0 ? ((double)stats.fm_rd_sect / stats.hcmd_rd_sect):0) << std::endl;
 
 }
 
@@ -266,6 +285,8 @@ bool CompEngine::init_engine(const char* trace_file_name)
 	}
 
 	avg_comp_size = sum / data_list.size();
+	avg_comp_ratio = (double)avg_comp_size / org_chunk_size;
+
 	cur_pointer = 0;
 
 	return true;
@@ -321,13 +342,14 @@ void CompSSD::print_statistics() {
 //	}
 }
 
-bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, uint64_t byte_per_die, double op_ratio )
+bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_pkg, uint64_t byte_per_die, double _op_ratio )
 {
 	fm_info = new FM_INFO();
     ftl_data = new LP_INFO();
     ftl_if = new FtlInterface();
     ftl_asyn_if = new FtlAsynReqInterface();
 
+	op_ratio = _op_ratio;
 	uint64_t bytes_per_pkg = die_per_pkg * byte_per_die;
 
 	if( !fm_info->InitFlashModule( channel_num, pkg_per_ch, die_per_pkg, bytes_per_pkg, channel_num, 2) ) {
@@ -337,6 +359,8 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	uint64_t usr_area_sector;
 	usr_area_sector = fm_info->GetTotalSector() / op_ratio ;
 	usr_area_sector += ( (usr_area_sector % SECTS_PER_PP) == 0 ? 0:(SECTS_PER_PP - usr_area_sector % SECTS_PER_PP ) ); // ページで割り切れるように調製
+
+	phy_sects = fm_info->GetTotalSector();
 
 	if( cmp_engine == NULL )
 		ERR_AND_RTN;
@@ -358,6 +382,7 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	if( !ftl_data->InitFTL( fm_info, usr_area_sector, ftl_if, ftl_asyn_if, &ftl_opt) ) {
 		ERR_AND_RTN;
 	}
+	//std::cout << avg_cmp_ratio << std::endl;
 	if( ftl_if->Format(true , avg_cmp_ratio) == false ) {
 		ERR_AND_RTN;
 	}
@@ -372,6 +397,8 @@ bool CompSSD::init(uint32_t channel_num, uint32_t pkg_per_ch, uint32_t die_per_p
 	read_penalty.resize(ftl_data->lp_num);
 	for( auto &p : read_penalty )
 		p = 0;
+
+	//std::cout << max_lba <<"," <<  phy_sects << std::endl;
 
 	return true;
 }
@@ -503,7 +530,7 @@ bool CompSSD::buffered_data_write(FTL_FMIO_TYPE iotype, std::vector<uint64_t>& l
 	// set length
 	for( auto &lp : l_write_buffer ){
 		if( iotype == FMT_HOST_WR ) {
-			len_list.push_back(FTL_SECTS_PER_LP * cmp_engine->get_next_ratio());
+			len_list.push_back( ceil((double)FTL_SECTS_PER_LP * cmp_engine->get_next_ratio()));
 		}else {
 			len_list.push_back( ftl_data->l2p_tbl[lp].len);
 		}
@@ -558,8 +585,10 @@ bool CompSSD::buffered_data_write(FTL_FMIO_TYPE iotype, std::vector<uint64_t>& l
 	}
 	for( auto &lp : l_write_buffer ) {
 		read_penalty[lp] = r_penalty;
-//		std::cout << "(" << lp << "," << ftl_data->l2p_tbl[lp].pgn  << "," << ftl_data->l2p_tbl[lp].ofs << "," << static_cast<int>(ftl_data->l2p_tbl[lp].len) << ","  << r_penalty << "), " ;
 	}
+	//for( auto &lp : l_write_buffer ) {
+	//	std::cout << "(" << lp << "," << ftl_data->l2p_tbl[lp].pgn  << "," << ftl_data->l2p_tbl[lp].ofs << "," << static_cast<int>(ftl_data->l2p_tbl[lp].len) << ","  << r_penalty << "), " ;
+	//}
 	//std::cout << std::endl;
 
 	l_write_buffer.clear();

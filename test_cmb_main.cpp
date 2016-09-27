@@ -37,16 +37,17 @@ int main(int argc, char* argv[])
 	// parameter
 	uint32_t drv_num = 5;
 	uint64_t max_drv_bytes = (uint64_t)32*(1024*1024*1024);
-	double   avg_cmp_ratio = 0.5;
+	//double   avg_cmp_ratio = 0.5;
 	double   ctl_op_ratio  = 1.25;
 	uint32_t ctl_cmp_chunk = 16;
 	double   ssd_op_ratio  = 1.25;
 	uint64_t ttl_io = 32*1024*1024 ;
 	// uint64_t ttl_io = 1 ;
-	uint32_t io_size_sect = 16;
+	uint32_t io_size_sect = 8;
 	COMP_MODE mode = CTL_SIDE;
 	std::string trace_file = "osdb_comp_trace.txt";
 	bool single_ssd_mode = true;
+	bool skip_ssd_mode = false;
 
     { // analyze input argument
         int i;
@@ -68,11 +69,11 @@ int main(int argc, char* argv[])
                     if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
                     else max_drv_bytes = std::stoull(argv[i]);
                 }
-				else if( strcmp(argv[i], "--avg_cmp_ratio") == 0 || strcmp(argv[i], "-c") ==0 )
-				{
-					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
-					else avg_cmp_ratio = std::stod(argv[i]);
-				}
+//				else if( strcmp(argv[i], "--avg_cmp_ratio") == 0 || strcmp(argv[i], "-c") ==0 )
+//				{
+//					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
+//					else avg_cmp_ratio = std::stod(argv[i]);
+//				}
 				else if( strcmp(argv[i], "--comp_mode") == 0 || strcmp(argv[i], "-m") ==0 )
 				{
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
@@ -110,6 +111,10 @@ int main(int argc, char* argv[])
                     if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
                     else trace_file = argv[i];
 				}
+				else if( strcmp(argv[i], "--skip_ssd") == 0 )
+				{
+					skip_ssd_mode = true;
+				}
                 else if( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
                 {
                     HowtoUse(argv[0]);
@@ -133,18 +138,11 @@ int main(int argc, char* argv[])
 	ssd_list.resize(drv_num);
 	drv_list.resize(drv_num);
 
-	time_t now = time(NULL);
-	struct tm *pnow = localtime(&now);
-	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
-
-	// print settings
-	std::cout << "#settings, mode, dnum, max_dbytes, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io, comp_trace" << std::endl;
-	std::cout << "," << (mode == CTL_SIDE ? "C" : "S") << "," << drv_num << ","<< max_drv_bytes << ","<< avg_cmp_ratio
-		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << "," << trace_file << std::endl;
-
 	// initialization
 	if( !cmp_engine.init_engine(trace_file.c_str()) )
 		ERR_AND_RTN;
+
+
 
 	if( mode == CTL_SIDE )
 	{ // controller side compression
@@ -186,6 +184,15 @@ int main(int argc, char* argv[])
 			ERR_AND_RTN;
 	}
 
+	// sim start
+	time_t now = time(NULL);
+	struct tm *pnow = localtime(&now);
+	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
+	// print settings
+	std::cout << "#settings, mode, dnum, drive_sect, drive_lba, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io, comp_trace, skip_ssd" << std::endl;
+	std::cout << "," << (mode == CTL_SIDE ? "C" : "S") << "," << drv_num << ","<< ssd_list[0]->get_phy_sect() << "," << ssd_list[0]->get_max_lba() << ","<< cmp_engine.get_avg_cmp_ratio()
+		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << "," << trace_file << "," << ((skip_ssd_mode)? "on":"off") << std::endl;
+
 	// main
 	CommandInfo cmd;
 	DriveCommandInfo drv_cmd;
@@ -195,41 +202,58 @@ int main(int argc, char* argv[])
 
 	sim_srand(0);
 
-	ttl_io = ctl->get_lp_num() * 2;
+	uint32_t round = 2;
+	ttl_io = (ctl->get_max_lba()/io_size_sect);
+	uint64_t io_align = (ctl->get_max_lba()/io_size_sect) - 1;
 
-	for( uint64_t i = 0; i < ttl_io; i++ )
+	//std::cout << "caution: test code included" << std::endl;
+
+	for( uint32_t r = 0; r < round ; r++ )
 	{
-	//	if( check_count > check_point ) {
-	//		printf(" %ld / %ld, ", i , ttl_io );
-	//		fflush(stdout);
-	//		check_count = 0;
-	//	}
-//		check_count++;
-
-		cmd.opcode = IO_WRITE;
-		cmd.sector_num = io_size_sect;
-
-		cmd.lba = sim_rand64(ctl->get_max_lba() - cmd.sector_num );
-
-		if( !ctl->receive_command( cmd) )
-			return false;
-
-		while( ctl->pull_next_command(drv_cmd) )
+		for( uint64_t i = 0; i < ttl_io; i++ )
 		{
-			CommandInfo& cmd2drv = drv_cmd.cmd_info;
-			if( single_ssd_mode && drv_cmd.tgt_drive != 0 )
-				continue;
+			//	if( check_count > check_point ) {
+			//		printf(" %ld / %ld, ", i , ttl_io );
+			//		fflush(stdout);
+			//		check_count = 0;
+			//	}
+			//		check_count++;
 
-			if( cmd2drv.opcode == IO_WRITE  ) {
-				if( !ssd_list[drv_cmd.tgt_drive]->write(cmd2drv.lba, cmd2drv.sector_num) ) {
+			cmd.opcode = IO_WRITE;
+			cmd.sector_num = io_size_sect;
+
+			//cmd.lba = sim_rand64(ctl->get_max_lba() - cmd.sector_num );
+			cmd.lba = sim_rand64(io_align) * io_size_sect;
+
+			if( !ctl->receive_command( cmd) )
+				return false;
+
+			while( ctl->pull_next_command(drv_cmd) )
+			{
+				CommandInfo& cmd2drv = drv_cmd.cmd_info;
+
+				if( skip_ssd_mode )
+					continue;
+
+				if( single_ssd_mode && drv_cmd.tgt_drive != 0 )
+					continue;
+
+				if( cmd2drv.opcode == IO_WRITE  ) {
+					if( !ssd_list[drv_cmd.tgt_drive]->write(cmd2drv.lba, cmd2drv.sector_num) ) {
+						ERR_AND_RTN;
+					}
+				} else if( cmd2drv.opcode == IO_READ ) {
+					if( !ssd_list[drv_cmd.tgt_drive]->read(cmd2drv.lba, cmd2drv.sector_num) ) {
+						ERR_AND_RTN;
+					}
+				}else
 					ERR_AND_RTN;
-				}
-			} else if( cmd2drv.opcode == IO_READ ) {
-				if( !ssd_list[drv_cmd.tgt_drive]->read(cmd2drv.lba, cmd2drv.sector_num) ) {
-					ERR_AND_RTN;
-				}
-			}else
-				ERR_AND_RTN;
+			}
+		}
+		if( r == 0 ) {
+			ctl->clear_statistics();
+			for( auto s : ssd_list )
+				s->clear_statistics();
 		}
 	}
 

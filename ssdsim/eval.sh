@@ -6,17 +6,27 @@ RES="result.txt"
 
 echo > $RES
 
-for fn in 1.15 1.2 1.25 1.3
+for typ in pa cc-nocomp
 do
-	$EXEA -o $fn -f pa >> $RES
-	$EXEA -o $fn -f ca >> $RES
-	$EXEA -o $fn -f ca -b 8 -t osdb_comp_trace_2.txt >> $RES
-	$EXEA -o $fn -f cc >> $RES
-	$EXEA -o $fn -f cc-nocomp >> $RES
+	for fn in 1.15 1.2 1.25 1.3
+	do
+		$EXEA -o $fn -f $typ >> $RES
+	done
+done
 
-	$EXEB -o $fn -f pa >> $RES
-	$EXEB -o $fn -f ca >> $RES
-	$EXEB -o $fn -f cc >> $RES
-	$EXEB -o $fn -f cc-nocomp >> $RES
+for typ in ca cc
+do
+	for fn in 1.15 1.2 1.25 1.3
+	do
+		$EXEA -o $fn -f $typ -b 4 -t osdb_comp_trace_16k.txt >> $RES
+	done
+done
+
+for typ in ca cc
+do
+	for fn in 1.15 1.2 1.25 1.3
+	do
+		$EXEA -o $fn -f $typ -b 8 -t osdb_comp_trace_32k.txt >> $RES
+	done
 done
 

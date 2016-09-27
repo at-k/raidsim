@@ -99,10 +99,12 @@ bool FtlInterface::L2P_Update ( FTL_FMIO_TYPE type, FTL_LP_GADDR lp_no, uchar le
         return false;
     }
 
+	//std::cout << "len,ofs:" << (uint32_t)len << "," << pg_dst_info->next_ofs <<  std::endl;
 	uint32_t pad = 0;
 	if( align_to_pp ) {
 		uint32_t ofs = pg_dst_info->next_ofs + len;
 		pad = ( (ofs % SECTS_PER_PP) == 0 ? 0 : (SECTS_PER_PP - ofs % SECTS_PER_PP) );
+		//std::cout << "pad:" << pad << std::endl;
 	//	len += pad;
 	}
 
@@ -467,6 +469,8 @@ bool FtlInterface::Format(bool enable_comp, double comp_ratio)
         if ( L2P_Update( FMT_HOST_WR, lp_no, len, addr, written_size) == false )
             return false;
     }
+
+//	std::cout << "format finished: " << lp_info->pool.total_free_pb_count <<","<< lp_info->pb_num << std::endl;
 
 	return true;
 }

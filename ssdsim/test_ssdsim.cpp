@@ -47,6 +47,7 @@ int main(int argc, char* argv[])
 {
 //    const char*     conf_file = "testconf.ini";
 //    const char*     out_dir   = "result";
+	//uint64_t byte_per_die = (uint64_t)1*1024*1024*1024;
 	uint64_t byte_per_die = (uint64_t)1*1024*1024*1024;
 	double   op_rate = 1.25;
 	FTL_TYPE ftl_type = CC_FTL;
@@ -118,22 +119,21 @@ int main(int argc, char* argv[])
         }
     }
 	// print settings
-	time_t now = time(NULL);
-	struct tm *pnow = localtime(&now);
-	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
-
-	std::cout << "#" << argv[0] << "," << ftl_type <<","<<enable_virtualization<<","<<trace_file<<","<<op_rate<<std::endl;
 
 	CompEngine cmp_engine;
-	if( ftl_type == CC_NOCOMP)
-		cmp_engine.init_engine(1.0);
-	else
-		cmp_engine.init_engine(trace_file.c_str());
 
 	//std::cout << cmp_engine.get_next_ratio() << std::endl;
 	//return 0;
 
-	if( ftl_type == CC_FTL || ftl_type == CA_FTL) {
+	if( ftl_type == CC_FTL || ftl_type == CA_FTL || ftl_type == CC_NOCOMP) {
+		if( ftl_type == CC_NOCOMP) {
+			if( !cmp_engine.init_engine(0.7) )
+				ERR_AND_RTN;
+		}else {
+			if( !cmp_engine.init_engine(trace_file.c_str()) )
+				ERR_AND_RTN;
+		}
+
 		CompSSD* cssd = new CompSSD();
 		if( ftl_type == CC_FTL) {
 			if( !cssd->setup_compression( enable_virtualization, &cmp_engine, A_CC_FTL, buffered_page_num ) ) {
@@ -153,18 +153,28 @@ int main(int argc, char* argv[])
 		ERR_AND_RTN;
 	}
 
+	time_t now = time(NULL);
+	struct tm *pnow = localtime(&now);
+	std::cout << "#start time: " << pnow->tm_hour << ":" << pnow->tm_min << ":" << pnow->tm_sec << std::endl;
+
+	std::cout << "#" << argv[0] << "," << ftl_type <<","<<enable_virtualization<<","<<trace_file<<","<<cmp_engine.get_avg_cmp_ratio() <<","<<op_rate<<","<<buffered_page_num<<std::endl;
+
 	sim_srand(0);
 //	printf("%ld, %ld\n", ssd->get_max_lba(), ssd->get_max_lpn());
-	std::vector<uint64_t> write_list;
 
 	for( uint32_t i = 0; i < ssd->get_max_lpn(); i++ )
 	//for( uint32_t i = 0; i < 12; i++ )
 	{// io test
 		uint64_t lp_no;
 		lp_no = sim_rand64( ssd->get_max_lpn() );
-		write_list.push_back(lp_no);
 
-		//printf("%ld\n", lp_no);
+		//static uint32_t k = 0;
+		//static uint32_t ttl = 0;
+		//ttl++;
+		//if( ++k == 100 ) {
+		//	printf("%d, %d, %ld\n", ttl, k, lp_no);
+		//	k = 0;
+		//}
 
 		if(!ssd->write( lp_no * FTL_SECTS_PER_LP, FTL_SECTS_PER_LP) )  {
 			ERR_AND_RTN;
@@ -176,22 +186,26 @@ int main(int argc, char* argv[])
 	{// io test
 		uint64_t lp_no;
 		lp_no = sim_rand64( ssd->get_max_lpn() );
-		write_list.push_back(lp_no);
-
-		//printf("%ld\n", lp_no);
 
 		if(!ssd->write( lp_no * FTL_SECTS_PER_LP, FTL_SECTS_PER_LP) )  {
 			ERR_AND_RTN;
 		}
 	}
 
-//	for( auto i : write_list) {
-//		if(!ssd->read( i * FTL_SECTS_PER_LP, FTL_SECTS_PER_LP) )  {
+	ssd->print_statistics();
+	ssd->clear_statistics();
+
+	// read test
+	std::cout << "caution: test mode\n";
+//	for( uint32_t i = 0; i < ssd->get_max_lpn(); i++ )
+//	{
+//		uint64_t lp_no;
+//		lp_no = sim_rand64( ssd->get_max_lpn() );
+//
+//		if(!ssd->read( lp_no * FTL_SECTS_PER_LP, FTL_SECTS_PER_LP) )  {
 //			ERR_AND_RTN;
 //		}
 //	}
-
-//	printf("successfully finished %ld\n", rw_count);
 
 //	std::ofstream writing_file;
 //	writing_file.open("result.txt", std::ios::out);

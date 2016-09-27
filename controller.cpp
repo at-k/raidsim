@@ -47,9 +47,8 @@ bool Controller::build_raid(RAID_TYPE type, std::vector<DriveInfo*>& drive_list,
 		rg.drive_list.push_back(drv);
 	}
 
-
 	if( drv_lba % stripe_size != 0 ) {
-		printf("# round up to stripe %d,%ld\n", stripe_size, drv_lba);
+		printf("# caution: round up to stripe %d,%ld,+%ld\n", stripe_size, drv_lba, drv_lba % stripe_size);
 		drv_lba -= drv_lba % stripe_size;
 	}
 
@@ -73,8 +72,10 @@ bool Controller::raid_translation(const CommandInfo& tgt_cmd, std::list<DriveCom
 	RGInfo& rg = rg_list.front();
 	ofs_in_rg  = tgt_cmd.lba;
 
-	if( ofs_in_rg + tgt_cmd.sector_num > rg.max_lba )
+	if( ofs_in_rg + tgt_cmd.sector_num > rg.max_lba ) {
+		std::cout << "address violatoin: " << ofs_in_rg <<","<< tgt_cmd.sector_num <<","<< rg.max_lba << std::endl;
 		ERR_AND_RTN;
+	}
 
 	if( rg.rg_type == RAID5 )
 	{
@@ -171,8 +172,10 @@ void Controller::record_statis(const CommandInfo& cmd)
 	}else if(cmd.opcode == IO_WRITE) {
 		stats.hcmd_wr_count++;
 		stats.hcmd_wr_sect += cmd.sector_num;
+		//std::cout << "host: " << cmd.sector_num << std::endl;
 	}
 }
+
 void Controller::record_statis(const DriveCommandInfo& cmd)
 {
 	stats.drvcmd_count ++;
@@ -182,14 +185,18 @@ void Controller::record_statis(const DriveCommandInfo& cmd)
 	}else if(cmd.cmd_info.opcode == IO_WRITE) {
 		stats.drv_wr_count++;
 		stats.drv_wr_sect += cmd.cmd_info.sector_num;
+		//std::cout << "drv: " << cmd.cmd_info.sector_num << std::endl;
 	}
 }
+
 void Controller::print_statistics()
 {
-	std::cout << "#controller statistics, max_lba, hcmd_cnt, hcmd_rd_cnt, hcmd_wr_cnt, hcmd_rd_sect, hcmd_wr_sect, dcmd_cnt, dcmd_rd_cnt, dcmd_wr_cnt, dcmd_rd_sect, dcmd_wr_sect " << std::endl;
+	std::cout << "#controller statistics, max_lba, hcmd_cnt, hcmd_rd_cnt, hcmd_wr_cnt, hcmd_rd_sect, hcmd_wr_sect, dcmd_cnt, dcmd_rd_cnt, dcmd_wr_cnt, dcmd_rd_sect, dcmd_wr_sect, wa, ra " << std::endl;
 	std::cout << "," << get_max_lba() << "," << stats.hcmd_count <<","<<stats.hcmd_rd_count <<","<<stats.hcmd_wr_count << ","
 		<< stats.hcmd_rd_sect << "," << stats.hcmd_wr_sect << ","<<stats.drvcmd_count << ","
-		<< stats.drv_rd_count<<","<<stats.drv_wr_count<<","<<stats.drv_rd_sect<<","<<stats.drv_wr_sect<<"\n";
+		<< stats.drv_rd_count<<","<<stats.drv_wr_count<<","<<stats.drv_rd_sect<<","<<stats.drv_wr_sect << ","
+		<< (stats.hcmd_wr_sect!=0?((double)stats.drv_wr_sect/stats.hcmd_wr_sect):0)<< ","
+		<< (stats.hcmd_rd_sect!=0?((double)stats.drv_rd_sect/stats.hcmd_rd_sect):0)<< std::endl;
 }
 void Controller::clear_statistics()
 {
@@ -265,7 +272,7 @@ bool CompController::init(CompEngine* _cmp_engine, double gc_buffer_ratio, uint6
 
 	// init log block
 	lb_num = rg_list.front().max_lba / lb_size;
-	gc_threshold = (uint64_t)lb_num * (0.05);
+	gc_threshold = (uint64_t)lb_num * (0.01);
 
 	lbt = new LOGBLOCK[lb_num];
 	for( uint64_t i = 0; i < lb_num; i++ ) {
@@ -451,6 +458,7 @@ bool CompController::lp_write(uint64_t lp_no)
 	// update map
 	lpt[lp_no].lb_id = buf.tgt_lgblock->id;
 	lpt[lp_no].ofs = buf.cur_sector;
+	lpt[lp_no].len = length;
 
 	// update reverse map
 	REVMAP revmap = { buf.cur_sector , lp_no };
@@ -458,8 +466,10 @@ bool CompController::lp_write(uint64_t lp_no)
 
 	// invalidate old data
 	lbt[old_lp_map.lb_id].free_sector_num += old_lp_map.len;
-	if( lbt[old_lp_map.lb_id].free_sector_num > lb_size )
+	if( lbt[old_lp_map.lb_id].free_sector_num > lb_size ) {
+		std::cout << "size violation:" << lbt[old_lp_map.lb_id].free_sector_num  <<","<< lb_size << "," << old_lp_map.len << "," << old_lp_map.lb_id<< std::endl;
 		ERR_AND_RTN;
+	}
 
 	if( lbt[old_lp_map.lb_id].free_sector_num == lb_size ) {
 		lbt[old_lp_map.lb_id].state = LB_FREE;
@@ -493,7 +503,8 @@ bool CompController::do_gc()
 {
 	LB_SORTED_LIST::index<free_sector>::type& fs = lb_list.get<free_sector>();
 
-	BOOST_FOREACH( LOGBLOCK* lb, fs) {
+	BOOST_FOREACH( LOGBLOCK* lb, fs)
+	{
 		if( lb->state != LB_CLOSE || lb->free_sector_num == 0 )
 			ERR_AND_RTN;
 
@@ -540,7 +551,7 @@ inline void CompController::update_lb_list(LOGBLOCK* lb)
 
 void CompController::print_statistics()
 {
-	std::cout << "#comp_controller statistics, virutal_max_lba, gc_rd_cnt, gc_wr_cnt, gc_rd_sect, gc_wr_sect" << std::endl;
+	std::cout << "#comp_controller statistics, virutal_max_lba, gc_rd_cnt, gc_wr_cnt, gc_rd_sect, gc_wr_sect, wa, wr" << std::endl;
 	std::cout << "," << virtual_max_lba << "," << cmp_stats.drv_gc_rd_count << "," << cmp_stats.drv_gc_wr_count << ","
 		<< cmp_stats.drv_gc_rd_sect << "," << cmp_stats.drv_gc_wr_sect << std::endl;
 	Controller::print_statistics();
