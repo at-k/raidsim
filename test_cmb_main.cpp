@@ -197,8 +197,8 @@ int main(int argc, char* argv[])
 	CommandInfo cmd;
 	DriveCommandInfo drv_cmd;
 
-	//const uint64_t check_point = ttl_io / 10;
-	//uint64_t check_count;
+	//const uint64_t check_point = ttl_io / 100;
+	//uint64_t check_count = 0;
 
 	sim_srand(0);
 
@@ -212,12 +212,12 @@ int main(int argc, char* argv[])
 	{
 		for( uint64_t i = 0; i < ttl_io; i++ )
 		{
-			//	if( check_count > check_point ) {
-			//		printf(" %ld / %ld, ", i , ttl_io );
-			//		fflush(stdout);
-			//		check_count = 0;
-			//	}
-			//		check_count++;
+				//if( check_count > check_point ) {
+				//	printf(" %ld / %ld, ", i , ttl_io );
+				//	fflush(stdout);
+				//	check_count = 0;
+				//}
+				//	check_count++;
 
 			cmd.opcode = IO_WRITE;
 			cmd.sector_num = io_size_sect;
