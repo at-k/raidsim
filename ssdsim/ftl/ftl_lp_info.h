@@ -5,8 +5,8 @@
 #include <deque>
 #include <vector>
 
-#include "common_def.h"
-#include "phy/fm_macro_def.h"
+#include "../util/common_def.h"
+#include "../phy/fm_macro_def.h"
 #include "pbque.h"
 
 //-- FTL data structure- --

@@ -1,9 +1,9 @@
 #include "controller.h"
-#include "common_def.h"
 #include "ssdsim/ssd.h"
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #include <iostream>
 #include <algorithm>
@@ -223,6 +223,123 @@ bool Controller::pull_next_command(DriveCommandInfo& next_cmd)
 	record_statis(next_cmd);
 
 	return true;
+}
+
+HdpController::HdpController() {
+	lp_sects = lp_sects_min;
+}
+
+HdpController::~HdpController() {
+}
+
+bool HdpController::create_lu( uint64_t size_sects, uint32_t id )
+{
+	while( id >= lu_list.size() ) {
+		LU_INFO lu_tmp;
+		lu_tmp.id = lu_list.size();
+		lu_tmp.max_lba = 0;
+		lu_list.push_back(lu_tmp);
+	}
+
+	if( lu_list[id].max_lba != 0 )
+		return false;
+
+	lu_list[id].max_lba = size_sects;
+	uint64_t lp_num = (size_sects / lp_sects) + 1;
+
+	lu_list[id].l2p_map.resize(lp_num, {});
+	lu_list[id].lp_stats.resize(lp_num, {0,0,0,{},0});
+
+	//std::cout << lu_list[id].lp_stats.size();
+	//for( uint32_t i = 0; i < lp_num; i++ ) {
+	//	lu_list[id].l2p_map.push_back({});
+	//	lu_list[id].lp_stats.push_back({0,0,0,{},0});
+	//}
+
+	return true;
+}
+
+bool HdpController::load_lu_conf( const char* conf_file)
+{
+	return true;
+}
+
+bool HdpController::receive_command(const CommandInfo& cmd)
+{
+	uint64_t lp_no;
+	uint32_t lu_no;
+
+	lu_no = cmd.vol;
+	lp_no = cmd.lba / lp_sects;
+
+	if( lu_no >= lu_list.size() || lp_no >= lu_list[lu_no].lp_stats.size() )
+		return false;
+
+	// only analyze statis
+	if( cmd.opcode == IO_READ ) {
+		lu_list[lu_no].lp_stats[lp_no].rd_cnt ++;
+	} else if( cmd.opcode == IO_WRITE ) {
+		lu_list[lu_no].lp_stats[lp_no].wr_cnt ++;
+		lu_list[lu_no].lp_stats[lp_no].wr_ttl_size += cmd.sector_num;
+		cmd_len_analysis( lu_no, lp_no, cmd.sector_num );
+	}
+
+	return	true;
+}
+
+void HdpController::cmd_len_analysis(uint32_t vol, uint64_t lp_no, uint32_t len)
+{
+	uint32_t tmp_len;
+	for( uint32_t p = 0; p < sect_cnt_array_max; p++ ) {
+		tmp_len = 1 << p;
+		if( len <= tmp_len ) {
+			lu_list[vol].lp_stats[lp_no].wr_sect_cnt[p] ++;
+			break;
+		}
+	}
+}
+
+void HdpController::cmd_seq_analysis(const CommandInfo& cmd)
+{
+
+}
+
+bool HdpController::pull_next_command(DriveCommandInfo& cmd)
+{// not implemented now
+	return true;
+}
+void HdpController::print_statistics()
+{
+	//std::cout << lu_list.size() << std::endl;
+	//std::cout << lu_list[8].lp_stats.size() << std::endl;
+	for( uint32_t i = 0; i < lu_list.size(); i++ ) {
+		auto& lu = lu_list[i];
+	//for(auto lu : lu_list ) {
+		//std::cout << "hoge\n";
+		std::cout << "# lu: " << lu.id << "," << lu.max_lba << "," << lu.lp_stats.size() << std::endl;
+		for( uint64_t lp_no = 0; lp_no < lu.lp_stats.size(); lp_no++ ) {
+		//for(auto p : lu.lp_stats) {
+			auto& p = lu.lp_stats[lp_no];
+			if( p.rd_cnt == 0 && p.wr_cnt == 0 )
+				continue;
+
+			std::cout << lp_no << "," << p.rd_cnt << "," << p.wr_cnt << "," << p.wr_ttl_size << "," << p.wr_seq_cnt;
+			for(auto s : p.wr_sect_cnt) {
+				std::cout << "," << s;
+			}
+			std::cout << std::endl;
+		}
+	}
+}
+
+void HdpController::clear_statistics()
+{
+
+}
+
+uint64_t HdpController::get_max_lba()
+{
+	return 0;
 }
 
 // ---- compression controller implementation

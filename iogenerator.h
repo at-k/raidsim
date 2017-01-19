@@ -3,8 +3,9 @@
 
 #include <stdio.h>
 #include <list>
+#include <fstream>
 
-#include "common_def.h"
+#include "util/common_def.h"
 #include "iosrc.h"
 
 class IoSrc;
@@ -19,6 +20,8 @@ public:
     virtual bool GetNextCommand(CommandInfo* command) = 0;
     virtual bool InitGenerator( uint32_t lu_num, uint64_t* sector_list ) {return false;}
 	virtual bool InitGenerator( const char* file_name ){return false;}
+
+	unsigned long long int GetCurrentIoCount(){ return current_io_num;}
 
 protected:
     unsigned long long int current_io_num;
@@ -57,6 +60,20 @@ private:
 
 	FILE* fp;
 	unsigned int total_fail_count;
+};
+
+class TPCC_IoGenerator : public IoGenerator
+{
+public:
+	TPCC_IoGenerator() {}
+	~TPCC_IoGenerator();
+
+	bool GetNextCommand(CommandInfo* command);
+	bool InitGenerator(const char* file_name);
+
+private:
+	std::ifstream ifs;
+
 };
 
 typedef struct

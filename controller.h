@@ -14,7 +14,7 @@
 #include <boost/multi_index/composite_key.hpp>
 
 #include "iosrc.h"
-#include "common_def.h"
+#include "util/common_def.h"
 
 using namespace boost::multi_index;
 
@@ -68,6 +68,7 @@ typedef struct {
 	uint64_t drv_gc_wr_sect;
 } CTL_COMP_STATISTICS;
 
+// RAID Layer
 class Controller
 {
 	public:
@@ -98,8 +99,60 @@ class Controller
 		virtual void record_statis(const DriveCommandInfo& cmd);
 };
 
-class CompEngine;
+// HDP Layer
+class HdpController : public Controller
+{
+	public:
+		HdpController();
+		virtual ~HdpController();
 
+		bool create_lu( uint64_t size_sects, uint32_t id );
+		bool load_lu_conf( const char* conf_file);
+
+		// host to controller
+		virtual bool receive_command(const CommandInfo&);
+		// controller to drive
+		virtual bool pull_next_command(DriveCommandInfo&);
+
+		virtual void print_statistics();
+		virtual void clear_statistics();
+
+		virtual uint64_t get_max_lba();
+
+	private:
+		const static uint32_t sect_cnt_array_max = 16;
+		typedef struct {
+			uint64_t rd_cnt;
+			uint64_t wr_cnt;
+			uint64_t wr_ttl_size;
+			uint64_t wr_sect_cnt[sect_cnt_array_max]; // 2^n sects
+			uint64_t wr_seq_cnt;
+		} LP_STATS;
+
+		typedef struct {
+			uint32_t rg_id;
+			uint64_t pp;
+		} LP_MAP;
+
+		typedef struct {
+			uint32_t id;
+			uint64_t max_lba;
+			std::deque<LP_MAP>   l2p_map;
+			std::deque<LP_STATS> lp_stats;
+		} LU_INFO;
+
+		std::deque<LU_INFO>   lu_list;
+		std::deque<uint64_t> free_list;
+
+		const uint32_t lp_sects_min = 16;
+		uint32_t lp_sects;
+
+		void cmd_len_analysis(uint32_t vol, uint64_t lp_no, uint32_t len);
+		void cmd_seq_analysis(const CommandInfo& cmd);
+};
+
+// Compression Layer (log structure)
+class CompEngine;
 class CompController : public Controller
 {
 	public:

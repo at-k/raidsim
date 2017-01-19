@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+#include <string>
+#include <iostream>
+#include <sstream>
 
 #include "iogenerator.h"
 #include "iosrc.h"
@@ -68,7 +71,7 @@ bool  Cello_IoGenerator::GetNextCommand(CommandInfo* command)
             continue;
         }
 
-        command->sector_num = ( size_byte + 512 - 1) / 512; // ‚Í‚Ä‚Ç‚¤‚¢‚¤ŒvŽZ‚¾‚Á‚½‚©c
+        command->sector_num = ( size_byte + 512 - 1) / 512;
 
         if( op_buffer[0] == 'R' || op_buffer[0] == 'r' )
             command->opcode = IO_READ;
@@ -93,6 +96,69 @@ bool Cello_IoGenerator::InitGenerator(const char* file_name)
 		return false;
 
 	total_fail_count = 0;
+
+	return true;
+}
+
+TPCC_IoGenerator::~TPCC_IoGenerator()
+{
+	if( ifs.is_open() )
+		ifs.close();
+}
+
+bool TPCC_IoGenerator::GetNextCommand(CommandInfo*  cmd)
+{
+	std::string line_str;
+	std::vector<std::string> v;
+	std::string buffer;
+
+	if( !ifs.is_open() || ifs.eof() )
+		return false;
+
+	while( getline(ifs, line_str) )
+	{
+		std::stringstream ss(line_str);
+		// split by "," and remove space
+		v.clear();
+		while( std::getline(ss, buffer, ',') ) {
+			for(size_t c = buffer.find_first_of(" "); c != std::string::npos; c = buffer.find_first_of(" ")){
+				buffer.erase( c, 1 );
+			}
+			v.push_back(buffer);
+		}
+
+		if( v.empty() || (v.size() > 1 && v[1] == "TimeStamp") )  continue;
+		if( v[0] != "DiskRead" && v[0] != "DiskWrite" ) continue;
+
+		//std::cout << v[8] << "," << v[5] << "," << v[6] << std::endl;
+		cmd->vol = std::stoi( v[8], nullptr, 10 );
+		cmd->lba = std::stoull( v[5], nullptr, 16 ) >> 9; // byte to sect
+		cmd->sector_num = std::stoull( v[6], nullptr, 16 ) >> 9; // byte to sect
+
+		if( v[0] == "DiskRead" )
+			cmd->opcode = IO_READ;
+		else if( v[0] == "DiskWrite")
+			cmd->opcode = IO_WRITE;
+		else continue;
+
+		current_io_num ++;
+
+		break;
+	}
+
+	return true;
+}
+
+bool TPCC_IoGenerator::InitGenerator(const char* file_name)
+{
+	if( ifs.is_open() )
+		return false;
+
+	ifs.open(file_name);
+	if( !ifs )
+		return false;
+
+	current_io_num = 0;
 
 	return true;
 }

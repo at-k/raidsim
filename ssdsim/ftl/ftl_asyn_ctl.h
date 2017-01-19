@@ -5,7 +5,7 @@
 //   状態遷移系はやらない，RCM対象PB/(LC)の決定と，ページコピーコマンド生成のみ
 //   というか基本的にパラメータの変更はやらない
 
-#include "phy/fm_arch_info.h"
+#include "../phy/fm_arch_info.h"
 #include "ftl_lp_info.h"
 
 // 消去・RCMなどの非同期要求関係

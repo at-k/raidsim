@@ -2,12 +2,60 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
-#include "sim.h"
 #include <time.h>
 
+#include "sim.h"
+#include "iogenerator.h"
 #include "controller.h"
 #include "ssdsim/ssd.h"
-#include "util_random.h"
+#include "util/util_random.h"
+
+
+uint64_t max_lba_list [] = {
+//487575632,
+//487598944,
+//487598936,
+//487598984,
+//487598936,
+//487598936,
+//487598936,
+//487598936,
+//886942706,
+//487598936,
+//487598936,
+//487598936,
+//487598936,
+//487575632,
+//487598936,
+//487598936,
+//28525584 ,
+//71654624 ,
+//0        ,
+//95533124
+//};
+
+378588288 ,
+378601642 ,
+378600698 ,
+378599402 ,
+378601178 ,
+378600250 ,
+378599274 ,
+378598522 ,
+476292577 ,
+378601034 ,
+378598810 ,
+378599706 ,
+378597306 ,
+378589152 ,
+378601626 ,
+378601210 ,
+19487423  ,
+95593616  ,
+0         ,
+95533124
+};
+
 
 typedef enum {
 	CTL_SIDE,
@@ -45,9 +93,13 @@ int main(int argc, char* argv[])
 	// uint64_t ttl_io = 1 ;
 	uint32_t io_size_sect = 8;
 	COMP_MODE mode = CTL_SIDE;
-	std::string trace_file = "osdb_comp_trace.txt";
+	std::string cmp_trace_file = "osdb_comp_trace.txt";
+	std::string io_trace_file = "";
+	bool io_trace_analysis_mode = false;
 	bool single_ssd_mode = true;
 	bool skip_ssd_mode = false;
+
+	uint32_t tgt_vol = 0;
 
     { // analyze input argument
         int i;
@@ -69,11 +121,6 @@ int main(int argc, char* argv[])
                     if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
                     else max_drv_bytes = std::stoull(argv[i]);
                 }
-//				else if( strcmp(argv[i], "--avg_cmp_ratio") == 0 || strcmp(argv[i], "-c") ==0 )
-//				{
-//					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
-//					else avg_cmp_ratio = std::stod(argv[i]);
-//				}
 				else if( strcmp(argv[i], "--comp_mode") == 0 || strcmp(argv[i], "-m") ==0 )
 				{
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
@@ -90,7 +137,7 @@ int main(int argc, char* argv[])
 				{
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
 					else ctl_op_ratio = std::stod(argv[i]);
-                }
+				}
 				else if( strcmp(argv[i], "--ctl_cmp_chunk") == 0 || strcmp(argv[i], "-C") ==0 )
 				{
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
@@ -101,15 +148,24 @@ int main(int argc, char* argv[])
 					if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
 					else ssd_op_ratio = std::stod(argv[i]);
                 }
-				//else if( strcmp(argv[i], "--ttl_io_cnt") == 0 || strcmp(argv[i], "-i") ==0 )
-				//{
-				//	if( !CheckAdditionalOpt(++i, argc, argv) )	return 0;
-				//	else ttl_io = std::stoll(argv[i]);
-                //}
-                else if( strcmp(argv[i], "--trace_file") == 0 || strcmp(argv[i], "-t") ==0 )
+                else if( strcmp(argv[i], "--cmp_trace_file") == 0 || strcmp(argv[i], "-c") ==0 )
                 {
                     if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
-                    else trace_file = argv[i];
+                    else cmp_trace_file = argv[i];
+				}
+				else if( strcmp(argv[i], "--io_trace_file") == 0 || strcmp(argv[i], "-t") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
+					else io_trace_file = argv[i];
+				}
+				else if( strcmp(argv[i], "--tgt_vol") == 0 || strcmp(argv[i], "-v") ==0 )
+				{
+					if( !CheckAdditionalOpt(++i, argc, argv) ) return 0;
+					else tgt_vol = std::stol(argv[i]);
+				}
+				else if( strcmp(argv[i], "--io_trace_analysis") == 0 || strcmp(argv[i], "-ia") ==0 )
+				{
+					io_trace_analysis_mode = true;
 				}
 				else if( strcmp(argv[i], "--skip_ssd") == 0 )
 				{
@@ -134,14 +190,70 @@ int main(int argc, char* argv[])
 	std::vector<SSD*>		ssd_list;
 	std::vector<DriveInfo*> drv_list;
 	CompEngine				cmp_engine;
+	IoGenerator*			iogen;
 
 	ssd_list.resize(drv_num);
 	drv_list.resize(drv_num);
 
-	// initialization
-	if( !cmp_engine.init_engine(trace_file.c_str()) )
-		ERR_AND_RTN;
+	TPCC_IoGenerator iogen_tpcc;
 
+	if( !io_trace_file.empty() ) {
+		if( !iogen_tpcc.InitGenerator( io_trace_file.c_str() ) ) {
+			printf("error\n");
+		}
+		iogen = &iogen_tpcc;
+	}else {
+		std::cout <<  ": io trace file is required in this version" << std::endl;
+		return false;
+	}
+
+	if( io_trace_analysis_mode )
+	{
+		CommandInfo cmd_kari;
+		std::vector<uint64_t> max_lba;
+		max_lba.clear();
+
+		while( iogen->GetNextCommand( &cmd_kari ) ) {
+			//std::cout << cmd_kari.vol << "," << cmd_kari.lba << std::endl;
+			if( cmd_kari.vol >= max_lba.size() ) {
+				max_lba.resize(cmd_kari.vol+1);
+			}
+			if( max_lba[cmd_kari.vol] < cmd_kari.lba + cmd_kari.sector_num )
+				max_lba[cmd_kari.vol] = cmd_kari.lba + cmd_kari.sector_num;
+		}
+		for(uint32_t i = 0; i < max_lba.size(); i++) {
+			std::cout << i << "," << max_lba[i] << std::endl;
+ 		}
+	} else
+	{
+		CommandInfo cmd_kari;
+		HdpController* hdp_con = new HdpController;
+
+		if( !hdp_con->create_lu( max_lba_list[tgt_vol], tgt_vol)) {
+			std::cout << "fail to create lu" << std::endl;
+			return false;
+		}
+
+		while( iogen->GetNextCommand( &cmd_kari ) ) {
+			if( cmd_kari.vol != tgt_vol )
+				continue;
+
+			if( !hdp_con->receive_command( cmd_kari ) ) {
+				std::cout << "fail to process IO command: command no = "
+					<< iogen->GetCurrentIoCount() << std::endl;
+				return false;
+			}
+
+		}
+
+		hdp_con->print_statistics();
+	}
+
+	return 0;
+
+	// initialization
+	if( !cmp_engine.init_engine(cmp_trace_file.c_str()) )
+		ERR_AND_RTN;
 
 
 	if( mode == CTL_SIDE )
@@ -191,7 +303,7 @@ int main(int argc, char* argv[])
 	// print settings
 	std::cout << "#settings, mode, dnum, drive_sect, drive_lba, cmp_ratio, ctl_opr, ctl_chunk, ssd_opr, ttl_io, comp_trace, skip_ssd" << std::endl;
 	std::cout << "," << (mode == CTL_SIDE ? "C" : "S") << "," << drv_num << ","<< ssd_list[0]->get_phy_sect() << "," << ssd_list[0]->get_max_lba() << ","<< cmp_engine.get_avg_cmp_ratio()
-		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << "," << trace_file << "," << ((skip_ssd_mode)? "on":"off") << std::endl;
+		<< ","<< ctl_op_ratio << ","<< ctl_cmp_chunk << ","<< ssd_op_ratio << ","<< ttl_io << "," << cmp_trace_file << "," << ((skip_ssd_mode)? "on":"off") << std::endl;
 
 	// main
 	CommandInfo cmd;

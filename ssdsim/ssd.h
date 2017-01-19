@@ -1,7 +1,7 @@
 #ifndef SSD_H_
 #define SSD_H_
 
-#include "common_def.h"
+#include "util/common_def.h"
 #include "ftl/ftl_lp_info.h"
 #include <vector>
 

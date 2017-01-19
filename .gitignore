@@ -2,3 +2,4 @@
 tags
 obj/*
 ssdsim/obj/*
+trace/*.csv

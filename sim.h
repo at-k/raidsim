@@ -2,7 +2,7 @@
 #define SIM_CORE___H
 
 #include <string>
-#include "common_def.h"
+#include "util/common_def.h"
 
 #define CONF_FILE_VERSION "3.1"
 

@@ -2,7 +2,7 @@
 #define LPTRANS__H
 
 #include <math.h>
-#include "phy/fm_macro_def.h"
+#include "../phy/fm_macro_def.h"
 #include "ftl_lp_info.h"
 #include "pbque.h"
 
