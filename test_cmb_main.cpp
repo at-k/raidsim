@@ -10,8 +10,115 @@
 #include "ssdsim/ssd.h"
 #include "util/util_random.h"
 
+std::string file_list [] = {
+	"~/panfs/trace/BuildServers/BuildServer00/BuildServer/Traces/24.hour.BuildServer.11-28-2007.07-24-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer00/BuildServer/Traces/24.hour.BuildServer.11-28-2007.07-39-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer00/BuildServer/Traces/24.hour.BuildServer.11-28-2007.07-55-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer01/BuildServer/Traces/24.hour.BuildServer.11-28-2007.08-10-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer01/BuildServer/Traces/24.hour.BuildServer.11-28-2007.08-25-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer01/BuildServer/Traces/24.hour.BuildServer.11-28-2007.08-40-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer01/BuildServer/Traces/24.hour.BuildServer.11-28-2007.08-55-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer02/BuildServer/Traces/24.hour.BuildServer.11-28-2007.09-10-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer02/BuildServer/Traces/24.hour.BuildServer.11-28-2007.09-26-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer02/BuildServer/Traces/24.hour.BuildServer.11-28-2007.09-41-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer02/BuildServer/Traces/24.hour.BuildServer.11-28-2007.09-56-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer03/BuildServer/Traces/24.hour.BuildServer.11-28-2007.10-11-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer03/BuildServer/Traces/24.hour.BuildServer.11-28-2007.10-26-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer03/BuildServer/Traces/24.hour.BuildServer.11-28-2007.10-42-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer03/BuildServer/Traces/24.hour.BuildServer.11-28-2007.10-57-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer04/BuildServer/Traces/24.hour.BuildServer.11-28-2007.11-12-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer04/BuildServer/Traces/24.hour.BuildServer.11-28-2007.11-27-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer04/BuildServer/Traces/24.hour.BuildServer.11-28-2007.11-43-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer04/BuildServer/Traces/24.hour.BuildServer.11-28-2007.11-58-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer05/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-13-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer05/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-28-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer05/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-44-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer05/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-59-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer06/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-14-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer06/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-29-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer06/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-44-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer06/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-59-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-05-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-20-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-35-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.01-50-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-05-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-14-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-20-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-30-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-36-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-45-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.02-51-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-00-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-06-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-15-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-21-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-30-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-36-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-45-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.03-51-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-00-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-06-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-15-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-21-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-31-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-36-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-46-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.04-52-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-01-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-07-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-16-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-22-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-31-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-37-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-46-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.05-52-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-01-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-07-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-16-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-22-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-32-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-38-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-47-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.06-53-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-02-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-08-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-17-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-23-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-32-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.07-47-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.08-02-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.08-17-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.08-33-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.08-48-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.09-03-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.09-18-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.09-33-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.09-48-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.10-03-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.10-18-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.10-34-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.10-49-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.11-04-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.11-19-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.11-34-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.11-49-AM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-04-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-19-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-35-PM.trace.csv",
+	"~/panfs/trace/BuildServers/BuildServer07/BuildServer/Traces/24.hour.BuildServer.11-29-2007.12-50-PM.trace.csv"
+};
 
 uint64_t max_lba_list [] = {
+	314572800,
+	314572800,
+	314572800,
+	314572800,
+	314572800,
+	314572800,
+	314572800,
+	314572800
+};
 //487575632,
 //487598944,
 //487598936,
@@ -34,27 +141,28 @@ uint64_t max_lba_list [] = {
 //95533124
 //};
 
-378588288 ,
-378601642 ,
-378600698 ,
-378599402 ,
-378601178 ,
-378600250 ,
-378599274 ,
-378598522 ,
-476292577 ,
-378601034 ,
-378598810 ,
-378599706 ,
-378597306 ,
-378589152 ,
-378601626 ,
-378601210 ,
-19487423  ,
-95593616  ,
-0         ,
-95533124
-};
+//378588288 ,
+//378601642 ,
+//378600698 ,
+//378599402 ,
+//378601178 ,
+//378600250 ,
+//378599274 ,
+//378598522 ,
+//476292577 ,
+//378601034 ,
+//378598810 ,
+//378599706 ,
+//378597306 ,
+//378589152 ,
+//378601626 ,
+//378601210 ,
+//19487423  ,
+//95593616  ,
+//0         ,
+//95533124
+//};
+//
 
 
 typedef enum {
@@ -195,17 +303,17 @@ int main(int argc, char* argv[])
 	ssd_list.resize(drv_num);
 	drv_list.resize(drv_num);
 
-	TPCC_IoGenerator iogen_tpcc;
-
-	if( !io_trace_file.empty() ) {
-		if( !iogen_tpcc.InitGenerator( io_trace_file.c_str() ) ) {
-			printf("error\n");
-		}
-		iogen = &iogen_tpcc;
-	}else {
-		std::cout <<  ": io trace file is required in this version" << std::endl;
-		return false;
-	}
+//	TPCC_IoGenerator iogen_tpcc;
+//
+//	if( !io_trace_file.empty() ) {
+//		if( !iogen_tpcc.InitGenerator( io_trace_file.c_str() ) ) {
+//			printf("error\n");
+//		}
+//		iogen = &iogen_tpcc;
+//	}else {
+//		std::cout <<  ": io trace file is required in this version" << std::endl;
+//		return false;
+//	}
 
 	if( io_trace_analysis_mode )
 	{
@@ -226,27 +334,55 @@ int main(int argc, char* argv[])
  		}
 	} else
 	{
-		CommandInfo cmd_kari;
+		TPCC_IoGenerator* iogen_tpcc;
 		HdpController* hdp_con = new HdpController;
 
-		if( !hdp_con->create_lu( max_lba_list[tgt_vol], tgt_vol)) {
-			std::cout << "fail to create lu" << std::endl;
-			return false;
+		uint32_t la_vol = 0;
+		for( auto max_lba : max_lba_list ) {
+			if( !hdp_con->create_lu( max_lba, la_vol)) {
+				std::cout << "fail to create lu" << std::endl;
+				return false;
+			}
+			la_vol ++;
 		}
+		std::cout << "lu initializing done" << std::endl;
 
-		while( iogen->GetNextCommand( &cmd_kari ) ) {
-			if( cmd_kari.vol != tgt_vol )
-				continue;
+		uint32_t counter = 0;
 
-			if( !hdp_con->receive_command( cmd_kari ) ) {
-				std::cout << "fail to process IO command: command no = "
-					<< iogen->GetCurrentIoCount() << std::endl;
+		for( auto t_file : file_list) {
+			iogen_tpcc = new TPCC_IoGenerator();
+			if( !iogen_tpcc->InitGenerator( t_file.c_str() ) ) {
+				printf("error\n");
 				return false;
 			}
 
-		}
+			CommandInfo cmd_kari;
 
-		hdp_con->print_statistics();
+			std::cout << "start:" << t_file << std::endl;
+
+			while( iogen_tpcc->GetNextCommand( &cmd_kari ) ) {
+				if( cmd_kari.vol != tgt_vol )
+					continue;
+
+				if( !hdp_con->receive_command( cmd_kari ) ) {
+					std::cout << "fail to process IO command: command no = "
+						<< iogen_tpcc->GetCurrentIoCount() << std::endl;
+					return false;
+				}
+
+				if( iogen_tpcc->GetCurrentIoCount() > 2 )
+					break;
+			}
+
+			std::string result_file = std::to_string(counter) + "_result.txt";
+			FILE* fp = freopen(result_file.c_str(), "w", stdout);
+			hdp_con->print_statistics();
+			fclose(fp);
+			fp = freopen ("/dev/tty", "a", stdout);
+
+			counter ++;
+			delete iogen_tpcc;
+		}
 	}
 
 	return 0;
